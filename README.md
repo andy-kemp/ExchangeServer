@@ -4,6 +4,10 @@ A Windows app for requesting, renewing, deploying and health-checking Exchange S
 
 Supports Exchange 2016, Exchange 2019 and Exchange Server Subscription Edition (SE), including on Windows Server 2025.
 
+![Certificates](docs/screenshots/certificates.webp)
+
+Docs: [docs.andykemp.com/exchange-cert-manager](https://docs.andykemp.com/exchange-cert-manager/) · Demo: [demos.andykemp.com/exchange-cert-manager](https://demos.andykemp.com/exchange-cert-manager/) · [tools.andykemp.com](https://tools.andykemp.com/exchange-cert-manager/)
+
 ## What it does
 
 | Page | What you get |
@@ -16,6 +20,10 @@ Supports Exchange 2016, Exchange 2019 and Exchange Server Subscription Edition (
 | **Import PFX** | Install a certificate you already have as a .pfx. Checks the file locally first (names, expiry, private key, password) then imports and assigns it on the servers you pick. |
 | **Deploy to servers** | Exports once, imports on every server that doesn't have it, assigns the same services everywhere. Shows a summary before it does anything. |
 | **Let's Encrypt** | HTTP-01 (writes the challenge to every server's Default Web Site, so it works behind a load balancer) or manual DNS-01 for wildcards. Installs and assigns the certificate, and registers a daily scheduled task that renews within 30 days of expiry. |
+
+| Health check | Let's Encrypt |
+|---|---|
+| ![Health check](docs/screenshots/health.webp) | ![Let's Encrypt](docs/screenshots/lets-encrypt.webp) |
 
 Everything is logged to the panel at the bottom and to `C:\ExchangeCertManager\Logs`.
 
@@ -30,9 +38,11 @@ No .NET install is needed; the EXE is self-contained.
 
 ## Download and run
 
-Grab `ExchangeCertManager.exe` from the latest build artifact (Actions → Build) or release, copy it somewhere permanent such as `C:\ExchangeCertManager`, and run it. It asks for elevation because it writes ACME challenge files to IIS and can register the renewal task.
+Grab `ExchangeCertManager.exe` from the [latest release](https://github.com/andy-kemp/ExchangeServer/releases/latest), copy it somewhere permanent such as `C:\ExchangeCertManager`, and run it. It asks for elevation because it writes ACME challenge files to IIS and can register the renewal task.
 
 ## Build
+
+Every push builds the EXE on a Windows runner and captures demo screenshots (`ExchangeCertManager.exe --screenshots <folder>`, sample Contoso data, no Exchange needed). Pushing a `v*` tag publishes a GitHub release with the EXE attached. Run `ExchangeCertManager.exe --demo` to explore the app without Exchange.
 
 ```powershell
 dotnet publish src/ExchangeCertManager/ExchangeCertManager.csproj -c Release -o publish

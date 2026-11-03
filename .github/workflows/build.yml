@@ -7,6 +7,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -45,3 +48,10 @@ jobs:
           name: ExchangeCertManager
           path: publish/ExchangeCertManager.exe
           if-no-files-found: error
+
+      - name: Publish the release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: publish/ExchangeCertManager.exe
+          generate_release_notes: true
