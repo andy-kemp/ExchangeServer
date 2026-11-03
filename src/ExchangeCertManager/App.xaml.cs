@@ -2,7 +2,9 @@ using System.Diagnostics;
 using System.Management.Automation;
 using System.Windows;
 using System.Windows.Threading;
+using ExchangeCertManager.Helpers;
 using ExchangeCertManager.Services;
+using ExchangeCertManager.ViewModels;
 
 namespace ExchangeCertManager;
 
@@ -24,6 +26,11 @@ public partial class App : Application
             return;
         }
 
+        var shotIndex = Array.FindIndex(e.Args, a => a.Equals(DemoMode.ScreenshotArgument, StringComparison.OrdinalIgnoreCase));
+        string? shotFolder = shotIndex >= 0 ? (shotIndex + 1 < e.Args.Length ? e.Args[shotIndex + 1] : "screenshots") : null;
+        var demo = shotFolder is not null || e.Args.Any(a => a.Equals(DemoMode.DemoArgument, StringComparison.OrdinalIgnoreCase));
+
+        _headless = shotFolder is not null;
         DispatcherUnhandledException += OnUnhandled;
         Log.Info($"Exchange Certificate Manager started on {Environment.MachineName}");
 
@@ -43,6 +50,8 @@ public partial class App : Application
             splash.SetStatus("Looking for Exchange on this machine…");
             var local = await Task.Run(ExchangeSession.DetectLocalExchangeServer);
             splash.SetStatus(local is null ? "Opening…" : $"Found {local}. Opening…");
+
+            if (shotFolder is not null) await DemoMode.CaptureSplashAsync(splash, shotFolder);
 
             // Stay up for about two seconds, however quickly we're ready.
             var left = TimeSpan.FromSeconds(2) - shown.Elapsed;
@@ -71,11 +80,25 @@ public partial class App : Application
         main.Show();
         main.Activate();
         splash.Close();
+
+        if (demo && main.DataContext is MainViewModel vm)
+        {
+            DemoMode.Seed(vm);
+            vm.Navigate("inventory");
+            if (shotFolder is not null)
+            {
+                await DemoMode.CaptureAsync(main, vm, shotFolder);
+                Shutdown(0);
+            }
+        }
     }
+
+    private bool _headless;
 
     private void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         Log.Error($"Unexpected error: {e.Exception}");
+        if (_headless) { e.Handled = true; return; } // screenshot run: never block on a dialog
         MessageBox.Show(e.Exception.Message, "Exchange Certificate Manager", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
     }

@@ -23,8 +23,19 @@ public sealed partial class AppState : ObservableObject
     public ObservableCollection<ExchangeServerInfo> Servers { get; } = new();
     public ObservableCollection<CertificateGroup> Inventory { get; } = new();
 
-    public bool IsConnected => Session is not null;
-    public string ConnectionText => Session is null ? "Not connected" : $"{Session.ConnectedServer} · {Session.ConnectedAs}";
+    public bool IsConnected => Session is not null || DemoConnection is not null;
+    public string ConnectionText => Session is not null ? $"{Session.ConnectedServer} · {Session.ConnectedAs}"
+        : DemoConnection ?? "Not connected";
+
+    /// <summary>Demo mode (--demo / --screenshots): sample data, no Exchange connection.</summary>
+    public string? DemoConnection { get; private set; }
+
+    public void EnterDemo(string connectionText)
+    {
+        DemoConnection = connectionText;
+        OnPropertyChanged(nameof(IsConnected));
+        OnPropertyChanged(nameof(ConnectionText));
+    }
 
     public UserSettings Settings { get; } = UserSettings.Load();
 

@@ -20,6 +20,21 @@ jobs:
       - name: Publish single-file EXE
         run: dotnet publish src/ExchangeCertManager/ExchangeCertManager.csproj -c Release -o publish
 
+      - name: Capture screenshots (demo data)
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          $p = Start-Process -FilePath publish/ExchangeCertManager.exe -ArgumentList '--screenshots', "$PWD\screenshots" -PassThru
+          if (-not $p.WaitForExit(180000)) { $p.Kill(); Write-Warning 'Screenshot run timed out' }
+          Get-ChildItem screenshots -ErrorAction SilentlyContinue
+          Get-ChildItem C:\ExchangeCertManager\Logs -ErrorAction SilentlyContinue | Get-Content -Tail 40
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/*.png
+          if-no-files-found: warn
+
       - uses: actions/upload-artifact@v4
         with:
           name: ExchangeCertManager
