@@ -22,6 +22,7 @@ public static class DemoMode
     public static void Seed(MainViewModel main)
     {
         var state = AppState.Current;
+        Log.Entries.Clear(); // start the log panel clean: only the sample organisation's lines
         state.EnterDemo("ex01.ad.contoso.com · CONTOSO\\andy");
 
         var ex01 = new ExchangeServerInfo { Name = "EX01", Fqdn = "ex01.ad.contoso.com", Version = "Version 15.2 (Build 2562.17)", Roles = "Mailbox" };
@@ -225,6 +226,6 @@ public static class DemoMode
         encoder.Frames.Add(BitmapFrame.Create(bmp));
         using var stream = File.Create(path);
         encoder.Save(stream);
-        Log.Info($"Saved {path}");
+        Console.WriteLine($"Saved {path}"); // not to the log panel, which is in the next capture
     }
 }

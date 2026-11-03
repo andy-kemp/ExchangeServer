@@ -20,7 +20,7 @@
         <DataTemplate DataType="{x:Type vm:HealthViewModel}"><v:HealthView/></DataTemplate>
     </Window.Resources>
 
-    <Grid>
+    <Grid Background="{StaticResource AkcBg}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
