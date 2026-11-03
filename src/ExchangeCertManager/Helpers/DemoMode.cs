@@ -205,11 +205,13 @@ public static class DemoMode
 
     private static void Save(Window window, string path)
     {
-        if (window.Content is not FrameworkElement root) return;
-        // Draw through a VisualBrush so margins and the element's offset don't crop the image.
+        // Render the window itself (its client area), so content margins and the splash's shadow aren't cropped.
+        FrameworkElement root = window;
         var dpi = VisualTreeHelper.GetDpi(root);
-        var bounds = VisualTreeHelper.GetDescendantBounds(root);
-        var size = new Size(Math.Max(root.ActualWidth, bounds.Right), Math.Max(root.ActualHeight, bounds.Bottom));
+        var size = window.Content is FrameworkElement content && window.WindowStyle != WindowStyle.None
+            ? new Size(content.ActualWidth, content.ActualHeight)
+            : new Size(window.ActualWidth, window.ActualHeight);
+        if (window.WindowStyle != WindowStyle.None && window.Content is FrameworkElement c) root = c;
         var visual = new DrawingVisual();
         using (var dc = visual.RenderOpen())
             dc.DrawRectangle(new VisualBrush(root) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top,
