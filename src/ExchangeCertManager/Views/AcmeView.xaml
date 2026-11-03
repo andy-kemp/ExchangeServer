@@ -1,0 +1,119 @@
+<UserControl x:Class="ExchangeCertManager.Views.AcmeView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:ExchangeCertManager.Views">
+    <StackPanel>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Column="0">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="1" Content="Account"/>
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="Contact email"/>
+                        <TextBox Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Style="{StaticResource Hint}" Text="Let's Encrypt sends expiry warnings here. The account key is stored encrypted in ProgramData."/>
+                        <CheckBox Content="Staging (test run, untrusted certificate, no rate limits)" IsChecked="{Binding Staging}" Margin="0,10,0,0"/>
+                        <TextBlock Style="{StaticResource Hint}" Text="Do a staging run first. Production has strict rate limits."/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="2" Content="Names"/>
+                        <Button Content="Suggest from Exchange URLs" Command="{Binding SuggestCommand}" HorizontalAlignment="Left" Margin="0,0,0,6"/>
+                        <TextBox Style="{StaticResource MultiLineTextBox}" Text="{Binding DomainsText, UpdateSourceTrigger=PropertyChanged}" Height="120"/>
+                        <TextBlock Style="{StaticResource Hint}" Text="One per line. The first is the common name. Internal names (.local etc.) can't be used."/>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="3" Content="Validation"/>
+                        <RadioButton Content="HTTP: challenge file in IIS (port 80 must reach Exchange)" IsChecked="{Binding UseHttp}"/>
+                        <RadioButton Content="DNS: you add TXT records (needed for wildcards)" IsChecked="{Binding UseDns}" Margin="0,6,0,0"/>
+                        <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
+                                   Text="HTTP writes the file to every selected server, so it works behind a load balancer. Only HTTP renewals run unattended."/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Grid.Column="2">
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="4" Content="Install on"/>
+                        <ItemsControl ItemsSource="{Binding Servers}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,3">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="130"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected}" VerticalAlignment="Center"/>
+                                        <TextBox Grid.Column="1" Text="{Binding Webroot, UpdateSourceTrigger=PropertyChanged}" ToolTip="Default Web Site physical path (local or UNC)"
+                                                 FontFamily="{StaticResource AkcMono}" FontSize="11.5"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Style="{StaticResource Hint}" Text="Web root is the Default Web Site folder, used for the HTTP challenge. Remote servers use the admin share."/>
+
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="Assign"/>
+                        <WrapPanel>
+                            <CheckBox Content="IIS" IsChecked="{Binding Services.Iis}" Margin="0,0,16,0"/>
+                            <CheckBox Content="SMTP" IsChecked="{Binding Services.Smtp}" Margin="0,0,16,0"/>
+                            <CheckBox Content="IMAP" IsChecked="{Binding Services.Imap}" Margin="0,0,16,0"/>
+                            <CheckBox Content="POP" IsChecked="{Binding Services.Pop}"/>
+                        </WrapPanel>
+                        <TextBlock Style="{StaticResource Hint}" Text="Leave SMTP off if you're hybrid: Let's Encrypt certificates renew every 60-90 days with a changing issuer, and connectors pinned by TlsCertificateName will break."/>
+
+                        <CheckBox Content="Remove the previous Let's Encrypt certificate after renewal" IsChecked="{Binding RemoveOld}" Margin="0,10,0,0"/>
+                        <CheckBox Content="Save for automatic renewal (HTTP only)" IsChecked="{Binding SaveForRenewal}" Margin="0,6,0,0"/>
+
+                        <Button Style="{StaticResource PrimaryButton}" Content="Get certificate" Command="{Binding IssueCommand}" HorizontalAlignment="Left" Margin="0,14,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="5" Content="Automatic renewal"/>
+                <TextBlock Text="{Binding TaskStatus}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                <DataGrid ItemsSource="{Binding Renewals}" SelectedItem="{Binding SelectedRenewal}" MaxHeight="200">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="NAMES" Binding="{Binding DomainsText}" Width="2*"/>
+                        <DataGridTextColumn Header="SERVERS" Binding="{Binding ServersText}" Width="*"/>
+                        <DataGridTextColumn Header="EXPIRES" Binding="{Binding NotAfter, Converter={x:Static v:DateText.Instance}}" Width="110"/>
+                        <DataGridCheckBoxColumn Header="STAGING" Binding="{Binding Staging}" Width="80"/>
+                        <DataGridTextColumn Header="LAST RESULT" Binding="{Binding LastResult}" Width="1.5*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <Button Content="Renew selected now" Command="{Binding RenewNowCommand}" Margin="0,0,8,0"/>
+                    <Button Style="{StaticResource DangerButton}" Content="Stop renewing selected" Command="{Binding DeleteRenewalCommand}" Padding="12,6"/>
+                </StackPanel>
+
+                <TextBlock Style="{StaticResource FieldLabel}" Text="Daily task runs as" Margin="0,16,0,3"/>
+                <Grid MaxWidth="640" HorizontalAlignment="Left">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="260"/>
+                        <ColumnDefinition Width="10"/>
+                        <ColumnDefinition Width="220"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" Text="{Binding TaskUser, UpdateSourceTrigger=PropertyChanged}" ToolTip="DOMAIN\account"/>
+                    <PasswordBox Grid.Column="2" x:Name="TaskPasswordInput" PasswordChanged="OnTaskPasswordChanged" ToolTip="Password"/>
+                    <Button Grid.Column="3" Content="Register task" Command="{Binding RegisterTaskCommand}" Margin="10,0,0,0"/>
+                </Grid>
+                <TextBlock Style="{StaticResource Hint}"
+                           Text="Use a dedicated service account with the Exchange certificate role and local admin here. Keep this EXE in a permanent folder (for example C:\ExchangeCertManager); the task runs it from where it is now."/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

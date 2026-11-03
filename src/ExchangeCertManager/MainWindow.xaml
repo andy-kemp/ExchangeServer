@@ -1,0 +1,154 @@
+<Window x:Class="ExchangeCertManager.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:ExchangeCertManager.ViewModels"
+        xmlns:v="clr-namespace:ExchangeCertManager.Views"
+        Title="Exchange Certificate Manager"
+        Style="{StaticResource AkcWindow}"
+        Icon="pack://application:,,,/app.ico"
+        Width="1280" Height="860" MinWidth="1000" MinHeight="640"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:ConnectViewModel}"><v:ConnectView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:InventoryViewModel}"><v:InventoryView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:RequestViewModel}"><v:RequestView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CompleteViewModel}"><v:CompleteView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DeployViewModel}"><v:DeployView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:AcmeViewModel}"><v:AcmeView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:HealthViewModel}"><v:HealthView/></DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource AkcBorder}" BorderThickness="0,0,0,1" Padding="18,10">
+            <DockPanel LastChildFill="False">
+                <Image DockPanel.Dock="Left" Source="pack://application:,,,/Assets/akc-logo.png" Height="30" Margin="0,0,14,0"
+                       RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
+                <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
+                    <TextBlock Text="Exchange Certificate Manager" FontWeight="Bold" FontSize="16" Foreground="{StaticResource AkcHeading}"/>
+                    <TextBlock Text="Exchange 2016, 2019 and Subscription Edition" FontSize="11" Foreground="{StaticResource AkcMuted}"/>
+                </StackPanel>
+                <Border DockPanel.Dock="Right" VerticalAlignment="Center">
+                    <Border.Style>
+                        <Style TargetType="Border" BasedOn="{StaticResource Pill}">
+                            <Setter Property="Tag" Value="Warning"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding State.IsConnected}" Value="True">
+                                    <Setter Property="Tag" Value="Ok"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Text="{Binding State.ConnectionText}"/>
+                </Border>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Navigation -->
+            <Border Grid.Column="0" Background="{StaticResource AkcBgSoft}" BorderBrush="{StaticResource AkcBorder}" BorderThickness="0,0,1,0" Padding="10,14">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding VersionText}" Foreground="{StaticResource AkcMuted}" FontSize="11" Margin="12,8,0,0"/>
+                    <StackPanel>
+                        <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Connect" IsChecked="{Binding IsConnectPage, Mode=TwoWay}"/>
+                        <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Certificates" IsChecked="{Binding IsInventoryPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
+                        <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Health check" IsChecked="{Binding IsHealthPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
+                        <TextBlock Text="TASKS" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource AkcMuted}" Margin="12,16,0,4"/>
+                        <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="New / renew request" IsChecked="{Binding IsRequestPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
+                        <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Complete request" IsChecked="{Binding IsCompletePage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
+                        <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Deploy to servers" IsChecked="{Binding IsDeployPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
+                        <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Let's Encrypt" IsChecked="{Binding IsAcmePage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <!-- Page -->
+            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="26,20,26,20">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="{Binding CurrentPage.Title}"/>
+                    <TextBlock Style="{StaticResource PageSubtitle}" Text="{Binding CurrentPage.Subtitle}"/>
+                    <ContentControl Content="{Binding CurrentPage}" Focusable="False"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- Log panel -->
+        <Border Grid.Row="2" Background="{StaticResource AkcLogBg}" Height="170"
+                Visibility="{Binding ShowLog, Converter={StaticResource BoolToVisibilityConverter}}">
+            <ListBox x:Name="LogList" ItemsSource="{Binding LogEntries}" Background="Transparent" BorderThickness="0"
+                     Foreground="{StaticResource AkcLogText}" FontFamily="{StaticResource AkcMono}" FontSize="11.5"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled" Padding="10,6">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="Padding" Value="0,1"/>
+                        <Setter Property="Focusable" Value="False"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem"><ContentPresenter/></ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock TextWrapping="Wrap">
+                            <Run Text="{Binding TimeText, Mode=OneWay}" Foreground="#9C8C7E"/>
+                            <Run Text=" "/>
+                            <Run Text="{Binding Message, Mode=OneWay}">
+                                <Run.Style>
+                                    <Style TargetType="Run">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Level}" Value="Success"><Setter Property="Foreground" Value="#8FD19E"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding Level}" Value="Warning"><Setter Property="Foreground" Value="#F2C46D"/></DataTrigger>
+                                            <DataTrigger Binding="{Binding Level}" Value="Error"><Setter Property="Foreground" Value="#F29A8A"/></DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Run.Style>
+                            </Run>
+                        </TextBlock>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Border>
+
+        <!-- Status bar -->
+        <Border Grid.Row="3" Background="{StaticResource AkcBgSoft}" BorderBrush="{StaticResource AkcBorder}" BorderThickness="0,1,0,0" Padding="12,2">
+            <DockPanel LastChildFill="False">
+                <Button DockPanel.Dock="Left" Content="{Binding ShowLog, Converter={x:Static v:LogToggleText.Instance}}" Command="{Binding ToggleLogCommand}" Padding="8,2" Margin="0,3"/>
+                <Button DockPanel.Dock="Left" Content="Clear" Command="{Binding ClearLogCommand}" Padding="8,2" Margin="6,3"/>
+                <Button DockPanel.Dock="Left" Content="Open log folder" Command="{Binding OpenLogFolderCommand}" Padding="8,2" Margin="0,3"/>
+                <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="{StaticResource AkcMuted}" FontSize="11"
+                           Text="Andy Kemp Consulting Ltd · andykemp.com"/>
+            </DockPanel>
+        </Border>
+
+        <!-- Busy overlay -->
+        <Grid Grid.RowSpan="4" Background="#99FFFFFF"
+              Visibility="{Binding State.IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+            <Border Style="{StaticResource Card}" Width="420" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="22">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.18"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="{Binding State.BusyText}" FontWeight="Bold" FontSize="14" TextWrapping="Wrap" Margin="0,0,0,12"
+                               Foreground="{StaticResource AkcHeading}"/>
+                    <ProgressBar IsIndeterminate="True"/>
+                    <TextBlock Style="{StaticResource Hint}" Text="Progress is shown in the log below." Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

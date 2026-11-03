@@ -1,0 +1,51 @@
+<UserControl x:Class="ExchangeCertManager.Views.DeployView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel MaxWidth="860" HorizontalAlignment="Left">
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="1" Content="Certificate"/>
+                <ComboBox ItemsSource="{Binding Certificates}" SelectedItem="{Binding Selected}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock>
+                                <Run Text="{Binding CommonName, Mode=OneWay}" FontWeight="SemiBold"/>
+                                <Run Text=" · " Foreground="{StaticResource AkcMuted}"/>
+                                <Run Text="{Binding ExpiryText, Mode=OneWay}"/>
+                                <Run Text=" · " Foreground="{StaticResource AkcMuted}"/>
+                                <Run Text="{Binding ServersText, Mode=OneWay}" Foreground="{StaticResource AkcMuted}"/>
+                            </TextBlock>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Style="{StaticResource Hint}" Text="{Binding SourceText}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="2" Content="Servers"/>
+                <ItemsControl ItemsSource="{Binding Targets}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate><CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected}" Margin="0,2"/></DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Style="{StaticResource Hint}" Text="Servers that already have it are only re-assigned, not re-imported."/>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="3" Content="Services"/>
+                <WrapPanel>
+                    <CheckBox Content="IIS" IsChecked="{Binding Services.Iis}" Margin="0,0,16,0"/>
+                    <CheckBox Content="SMTP" IsChecked="{Binding Services.Smtp}" Margin="0,0,16,0"/>
+                    <CheckBox Content="IMAP" IsChecked="{Binding Services.Imap}" Margin="0,0,16,0"/>
+                    <CheckBox Content="POP" IsChecked="{Binding Services.Pop}"/>
+                </WrapPanel>
+                <TextBlock Style="{StaticResource Hint}" Text="Untick everything to just copy the certificate across (right for the Exchange Auth certificate)."/>
+                <Button Style="{StaticResource PrimaryButton}" Content="Review and deploy…" Command="{Binding RunCommand}" HorizontalAlignment="Left" Margin="0,14,0,0"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>
