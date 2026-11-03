@@ -3,12 +3,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:v="clr-namespace:ExchangeCertManager.Views">
     <StackPanel>
+        <TextBlock Text="{Binding Summary}" Foreground="{StaticResource AkcMuted}" Margin="0,0,0,8"/>
         <DockPanel Margin="0,0,0,10" LastChildFill="False">
-            <TextBlock DockPanel.Dock="Left" Text="{Binding Summary}" VerticalAlignment="Center" Foreground="{StaticResource AkcMuted}"/>
             <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding RefreshCommand}" Margin="8,0,0,0"/>
             <CheckBox DockPanel.Dock="Right" Content="Show self-signed" IsChecked="{Binding ShowSelfSigned}" Margin="12,0"/>
-            <TextBox DockPanel.Dock="Right" Width="220" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search name, SAN or thumbprint"/>
-            <TextBlock DockPanel.Dock="Right" Text="Search" VerticalAlignment="Center" Margin="0,0,6,0" Foreground="{StaticResource AkcMuted}"/>
+            <TextBlock DockPanel.Dock="Left" Text="Search" VerticalAlignment="Center" Margin="0,0,8,0" Foreground="{StaticResource AkcMuted}"/>
+            <TextBox DockPanel.Dock="Left" Width="260" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search name, SAN or thumbprint"/>
         </DockPanel>
 
         <DataGrid ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}" MinHeight="180" MaxHeight="360">

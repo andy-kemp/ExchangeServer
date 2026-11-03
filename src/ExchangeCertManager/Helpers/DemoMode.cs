@@ -181,6 +181,7 @@ public static class DemoMode
         foreach (var (key, file, prepare) in pages)
         {
             main.Navigate(key);
+            main.ShowLog = key == "inventory"; // the log panel once is enough; more of each page otherwise
             prepare?.Invoke();
             await Settle(window);
             Save(window, Path.Combine(folder, file));
@@ -205,12 +206,19 @@ public static class DemoMode
     private static void Save(Window window, string path)
     {
         if (window.Content is not FrameworkElement root) return;
+        // Draw through a VisualBrush so margins and the element's offset don't crop the image.
         var dpi = VisualTreeHelper.GetDpi(root);
+        var bounds = VisualTreeHelper.GetDescendantBounds(root);
+        var size = new Size(Math.Max(root.ActualWidth, bounds.Right), Math.Max(root.ActualHeight, bounds.Bottom));
+        var visual = new DrawingVisual();
+        using (var dc = visual.RenderOpen())
+            dc.DrawRectangle(new VisualBrush(root) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top,
+                ViewboxUnits = BrushMappingMode.Absolute, Viewbox = new Rect(size) }, null, new Rect(size));
         var bmp = new RenderTargetBitmap(
-            (int)Math.Ceiling(root.ActualWidth * dpi.DpiScaleX),
-            (int)Math.Ceiling(root.ActualHeight * dpi.DpiScaleY),
+            (int)Math.Ceiling(size.Width * dpi.DpiScaleX),
+            (int)Math.Ceiling(size.Height * dpi.DpiScaleY),
             dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
-        bmp.Render(root);
+        bmp.Render(visual);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bmp));
         using var stream = File.Create(path);

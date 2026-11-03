@@ -75,6 +75,13 @@ public partial class App : Application
             return;
         }
 
+        if (shotFolder is not null)
+        {
+            // Screenshots at a typical desktop size, whatever the build machine's screen.
+            main.WindowStartupLocation = WindowStartupLocation.Manual;
+            main.Left = 0; main.Top = 0; main.Width = 1440; main.Height = 900;
+        }
+
         MainWindow = main;
         ShutdownMode = ShutdownMode.OnMainWindowClose;
         main.Show();

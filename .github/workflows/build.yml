@@ -24,6 +24,7 @@ jobs:
         shell: pwsh
         timeout-minutes: 5
         run: |
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force -ErrorAction Stop } catch { Write-Warning "Couldn't change resolution: $_" }
           $p = Start-Process -FilePath publish/ExchangeCertManager.exe -ArgumentList '--screenshots', "$PWD\screenshots" -PassThru
           if (-not $p.WaitForExit(180000)) { $p.Kill(); Write-Warning 'Screenshot run timed out' }
           Get-ChildItem screenshots -ErrorAction SilentlyContinue
