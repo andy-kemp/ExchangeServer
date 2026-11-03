@@ -47,6 +47,8 @@
     <Resource Include="Fonts\Inter-Regular.ttf" />
     <Resource Include="Fonts\Inter-Bold.ttf" />
     <Resource Include="Assets\akc-logo.png" />
+    <Resource Include="Assets\akc-logo-header.png" />
+    <Resource Include="Assets\ak-monogram.png" />
   </ItemGroup>
 
 </Project>
