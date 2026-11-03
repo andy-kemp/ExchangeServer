@@ -97,7 +97,9 @@ public partial class App : Application
 
     private void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        Log.Error($"Unexpected error: {e.Exception}");
+        var root = e.Exception;
+        while (root.InnerException is not null) root = root.InnerException;
+        Log.Error($"Unexpected error: {root.GetType().Name}: {root.Message} | {string.Join(" <- ", (root.StackTrace ?? "").Split('\n').Take(6).Select(l => l.Trim()))}");
         if (_headless) { e.Handled = true; return; } // screenshot run: never block on a dialog
         MessageBox.Show(e.Exception.Message, "Exchange Certificate Manager", MessageBoxButton.OK, MessageBoxImage.Error);
         e.Handled = true;
