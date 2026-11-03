@@ -14,6 +14,7 @@
         <DataTemplate DataType="{x:Type vm:InventoryViewModel}"><v:InventoryView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:RequestViewModel}"><v:RequestView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:CompleteViewModel}"><v:CompleteView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ImportViewModel}"><v:ImportView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:DeployViewModel}"><v:DeployView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:AcmeViewModel}"><v:AcmeView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:HealthViewModel}"><v:HealthView/></DataTemplate>
@@ -69,6 +70,7 @@
                         <TextBlock Text="TASKS" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource AkcMuted}" Margin="12,16,0,4"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="New / renew request" IsChecked="{Binding IsRequestPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Complete request" IsChecked="{Binding IsCompletePage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
+                        <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Import PFX" IsChecked="{Binding IsImportPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Deploy to servers" IsChecked="{Binding IsDeployPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Let's Encrypt" IsChecked="{Binding IsAcmePage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                     </StackPanel>

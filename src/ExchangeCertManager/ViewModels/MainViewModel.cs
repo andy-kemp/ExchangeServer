@@ -15,6 +15,7 @@ public sealed partial class MainViewModel : ObservableObject
         Inventory = new InventoryViewModel(this);
         Request = new RequestViewModel(this);
         Complete = new CompleteViewModel(this);
+        Import = new ImportViewModel(this);
         Deploy = new DeployViewModel(this);
         Acme = new AcmeViewModel(this);
         Health = new HealthViewModel(this);
@@ -35,6 +36,7 @@ public sealed partial class MainViewModel : ObservableObject
     public InventoryViewModel Inventory { get; }
     public RequestViewModel Request { get; }
     public CompleteViewModel Complete { get; }
+    public ImportViewModel Import { get; }
     public DeployViewModel Deploy { get; }
     public AcmeViewModel Acme { get; }
     public HealthViewModel Health { get; }
@@ -47,13 +49,14 @@ public sealed partial class MainViewModel : ObservableObject
     public bool IsInventoryPage { get => CurrentPage == Inventory; set { if (value) Navigate("inventory"); } }
     public bool IsRequestPage { get => CurrentPage == Request; set { if (value) Navigate("request"); } }
     public bool IsCompletePage { get => CurrentPage == Complete; set { if (value) Navigate("complete"); } }
+    public bool IsImportPage { get => CurrentPage == Import; set { if (value) Navigate("import"); } }
     public bool IsDeployPage { get => CurrentPage == Deploy; set { if (value) Navigate("deploy"); } }
     public bool IsAcmePage { get => CurrentPage == Acme; set { if (value) Navigate("acme"); } }
     public bool IsHealthPage { get => CurrentPage == Health; set { if (value) Navigate("health"); } }
 
     partial void OnCurrentPageChanged(PageViewModel value)
     {
-        foreach (var name in new[] { nameof(IsConnectPage), nameof(IsInventoryPage), nameof(IsRequestPage), nameof(IsCompletePage),
+        foreach (var name in new[] { nameof(IsConnectPage), nameof(IsInventoryPage), nameof(IsRequestPage), nameof(IsCompletePage), nameof(IsImportPage),
                                      nameof(IsDeployPage), nameof(IsAcmePage), nameof(IsHealthPage) })
             OnPropertyChanged(name);
         value.OnShown();
@@ -66,6 +69,7 @@ public sealed partial class MainViewModel : ObservableObject
             "inventory" => Inventory,
             "request" => Request,
             "complete" => Complete,
+            "import" => Import,
             "deploy" => Deploy,
             "acme" => Acme,
             "health" => Health,

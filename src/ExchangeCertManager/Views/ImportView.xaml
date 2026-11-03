@@ -1,0 +1,53 @@
+<UserControl x:Class="ExchangeCertManager.Views.ImportView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:ExchangeCertManager.Views">
+    <StackPanel MaxWidth="860" HorizontalAlignment="Left">
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="1" Content="PFX file"/>
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Browse…" Command="{Binding BrowseCommand}" Margin="8,0,0,0"/>
+                    <TextBox Text="{Binding FilePath, UpdateSourceTrigger=PropertyChanged}"/>
+                </DockPanel>
+                <TextBlock Style="{StaticResource FieldLabel}" Text="Password"/>
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Check file" Command="{Binding CheckCommand}" Margin="8,0,0,0"/>
+                    <PasswordBox x:Name="PasswordInput" PasswordChanged="OnPasswordChanged"/>
+                </DockPanel>
+                <Border Style="{StaticResource Pill}" Tag="{Binding DetailsState}" HorizontalAlignment="Stretch" CornerRadius="8" Padding="12,8" Margin="0,10,0,0"
+                        Visibility="{Binding Details, Converter={x:Static v:VisibleWhen.Instance}}">
+                    <TextBlock Text="{Binding Details}" TextWrapping="Wrap" FontWeight="Normal" FontSize="12"/>
+                </Border>
+                <TextBlock Style="{StaticResource FieldLabel}" Text="Friendly name"/>
+                <TextBox Text="{Binding FriendlyName, UpdateSourceTrigger=PropertyChanged}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="2" Content="Servers"/>
+                <ItemsControl ItemsSource="{Binding Targets}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate><CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected}" Margin="0,2"/></DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Style="{StaticResource Hint}" Text="Servers that already have this certificate are only re-assigned."/>
+            </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="3" Content="Services"/>
+                <WrapPanel>
+                    <CheckBox Content="IIS" IsChecked="{Binding Services.Iis}" Margin="0,0,16,0"/>
+                    <CheckBox Content="SMTP" IsChecked="{Binding Services.Smtp}" Margin="0,0,16,0"/>
+                    <CheckBox Content="IMAP" IsChecked="{Binding Services.Imap}" Margin="0,0,16,0"/>
+                    <CheckBox Content="POP" IsChecked="{Binding Services.Pop}"/>
+                </WrapPanel>
+                <TextBlock Style="{StaticResource Hint}" Text="Untick everything to install it without assigning anything yet."/>
+                <Button Style="{StaticResource PrimaryButton}" Content="Import" Command="{Binding ImportCommand}" HorizontalAlignment="Left" Margin="0,14,0,0"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

@@ -13,6 +13,7 @@ Supports Exchange 2016, Exchange 2019 and Exchange Server Subscription Edition (
 | **Health check** | Expiring certificates in use, the **Exchange Auth (OAuth) certificate**, whether the IIS certificate's SANs cover every URL configured on the virtual directories / Outlook Anywhere / Autodiscover, connectors whose `TlsCertificateName` points at a certificate that's gone (the classic hybrid break), servers missing a certificate the others have, and clean-up candidates. |
 | **New / renew request** | Creates the key on the server and gives you the CSR. "Suggest from Exchange URLs" fills the names in from your configuration. Renew from the Certificates page keeps the same names. |
 | **Complete request** | Imports the CA's response on the server with the pending request, assigns services and copies it to the other servers in one step. |
+| **Import PFX** | Install a certificate you already have as a .pfx. Checks the file locally first (names, expiry, private key, password) then imports and assigns it on the servers you pick. |
 | **Deploy to servers** | Exports once, imports on every server that doesn't have it, assigns the same services everywhere. Shows a summary before it does anything. |
 | **Let's Encrypt** | HTTP-01 (writes the challenge to every server's Default Web Site, so it works behind a load balancer) or manual DNS-01 for wildcards. Installs and assigns the certificate, and registers a daily scheduled task that renews within 30 days of expiry. |
 
