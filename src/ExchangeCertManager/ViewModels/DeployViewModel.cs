@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ExchangeCertManager.Models;
+using ExchangeCertManager.Services;
 
 namespace ExchangeCertManager.ViewModels;
 

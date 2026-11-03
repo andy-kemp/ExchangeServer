@@ -151,7 +151,7 @@ public sealed class AcmeService
         foreach (var root in webroots.Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var dir = Path.Combine(root, ".well-known", "acme-challenge");
-            Directory.CreateDirectory(dir);
+            System.IO.Directory.CreateDirectory(dir);
             var config = Path.Combine(dir, "web.config");
             if (!File.Exists(config)) File.WriteAllText(config, ChallengeWebConfig);
             var file = Path.Combine(dir, token);

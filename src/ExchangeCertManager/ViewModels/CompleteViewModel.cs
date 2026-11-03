@@ -4,6 +4,7 @@ using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ExchangeCertManager.Models;
+using ExchangeCertManager.Services;
 using Microsoft.Win32;
 
 namespace ExchangeCertManager.ViewModels;
