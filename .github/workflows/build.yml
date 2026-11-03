@@ -1,0 +1,57 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish single-file EXE
+        run: dotnet publish src/ExchangeCertManager/ExchangeCertManager.csproj -c Release -o publish
+
+      - name: Capture screenshots (demo data)
+        shell: pwsh
+        timeout-minutes: 5
+        run: |
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force -ErrorAction Stop } catch { Write-Warning "Couldn't change resolution: $_" }
+          $p = Start-Process -FilePath publish/ExchangeCertManager.exe -ArgumentList '--screenshots', "$PWD\screenshots" -PassThru
+          if (-not $p.WaitForExit(180000)) { $p.Kill(); Write-Warning 'Screenshot run timed out' }
+          Get-ChildItem screenshots -ErrorAction SilentlyContinue
+          Get-ChildItem C:\ExchangeCertManager\Logs -ErrorAction SilentlyContinue | Get-Content | Select-String 'ERROR|WARNING' | Select-Object -First 20
+          # Images as base64 in the log so they can be retrieved without artifact storage access
+          Get-ChildItem screenshots -Filter *.png -ErrorAction SilentlyContinue | ForEach-Object {
+            "PNGB64 $($_.Name) $([Convert]::ToBase64String([IO.File]::ReadAllBytes($_.FullName)))"
+          }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/*.png
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ExchangeCertManager
+          path: publish/ExchangeCertManager.exe
+          if-no-files-found: error
+
+      - name: Publish the release (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: publish/ExchangeCertManager.exe
+          generate_release_notes: true

@@ -1,0 +1,59 @@
+<UserControl x:Class="ExchangeCertManager.Views.CompleteView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:ExchangeCertManager.Views">
+    <StackPanel MaxWidth="860" HorizontalAlignment="Left">
+        <Border Style="{StaticResource Card}" Visibility="{Binding HasPending, Converter={x:Static v:VisibleWhen.Not}}">
+            <StackPanel>
+                <TextBlock Text="No pending requests" FontWeight="Bold" Foreground="{StaticResource AkcHeading}"/>
+                <TextBlock Style="{StaticResource Hint}" Text="Create one on the New / renew request page first. If you made one elsewhere, refresh the Certificates page."/>
+            </StackPanel>
+        </Border>
+
+        <StackPanel Visibility="{Binding HasPending, Converter={x:Static v:VisibleWhen.Instance}}">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="1" Content="Pending request"/>
+                    <DataGrid ItemsSource="{Binding Pending}" SelectedItem="{Binding Selected}" MaxHeight="200">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="SERVER" Binding="{Binding Server}" Width="140"/>
+                            <DataGridTextColumn Header="SUBJECT" Binding="{Binding Subject}" Width="2*"/>
+                            <DataGridTextColumn Header="FRIENDLY NAME" Binding="{Binding FriendlyName}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="2" Content="Certificate from your CA"/>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Browse…" Command="{Binding BrowseCommand}" Margin="8,0,0,0"/>
+                        <TextBox Text="{Binding FilePath, UpdateSourceTrigger=PropertyChanged}"/>
+                    </DockPanel>
+                    <TextBlock Style="{StaticResource Hint}" Text=".cer, .crt, .p7b or .pem. A .p7b with the full chain is best."/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="3" Content="Then"/>
+                    <CheckBox Content="Assign services" IsChecked="{Binding AssignAfter}"/>
+                    <WrapPanel Margin="24,6,0,0" IsEnabled="{Binding AssignAfter}">
+                        <CheckBox Content="IIS" IsChecked="{Binding Services.Iis}" Margin="0,0,16,0"/>
+                        <CheckBox Content="SMTP" IsChecked="{Binding Services.Smtp}" Margin="0,0,16,0"/>
+                        <CheckBox Content="IMAP" IsChecked="{Binding Services.Imap}" Margin="0,0,16,0"/>
+                        <CheckBox Content="POP" IsChecked="{Binding Services.Pop}"/>
+                    </WrapPanel>
+                    <CheckBox Content="Copy it to these servers too" IsChecked="{Binding DeployAfter}" Margin="0,12,0,0"/>
+                    <ItemsControl ItemsSource="{Binding OtherServers}" Margin="24,6,0,0" IsEnabled="{Binding DeployAfter}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate><CheckBox Content="{Binding Name}" IsChecked="{Binding IsSelected}" Margin="0,2"/></DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Style="{StaticResource PrimaryButton}" Content="Complete request" Command="{Binding CompleteCommand}" HorizontalAlignment="Left" Margin="0,14,0,0"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

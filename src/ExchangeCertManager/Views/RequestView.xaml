@@ -1,0 +1,95 @@
+<UserControl x:Class="ExchangeCertManager.Views.RequestView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:ExchangeCertManager.Views">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="16"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <StackPanel Grid.Column="0">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="1" Content="Where and what"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Create the request on"/>
+                    <ComboBox ItemsSource="{Binding State.Servers}" SelectedItem="{Binding Server}" DisplayMemberPath="Name"/>
+                    <TextBlock Style="{StaticResource Hint}" Text="The private key is created on this server. Complete the request on the same server, then deploy it to the rest."/>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Type"/>
+                    <StackPanel Orientation="Horizontal">
+                        <RadioButton Content="SAN certificate" IsChecked="{Binding IsWildcard, Converter={x:Static v:InverseBool.Instance}}" Margin="0,0,18,0"/>
+                        <RadioButton Content="Wildcard" IsChecked="{Binding IsWildcard}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="2" Content="Names"/>
+                    <Button Content="Suggest from Exchange URLs" Command="{Binding SuggestCommand}" HorizontalAlignment="Left" Margin="0,0,0,4"
+                            ToolTip="Reads the internal and external URLs from every virtual directory, Outlook Anywhere and Autodiscover"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Common name"/>
+                    <TextBox Text="{Binding CommonName, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Additional names (one per line)"/>
+                    <TextBox Style="{StaticResource MultiLineTextBox}" Text="{Binding DomainsText, UpdateSourceTrigger=PropertyChanged}" Height="120"/>
+                    <Border Style="{StaticResource Pill}" Tag="Warning" Margin="0,8,0,0" HorizontalAlignment="Stretch" CornerRadius="8" Padding="10,6"
+                            Visibility="{Binding Warning, Converter={x:Static v:VisibleWhen.Instance}}">
+                        <TextBlock Text="{Binding Warning}" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                    </Border>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Friendly name"/>
+                    <TextBox Text="{Binding FriendlyName, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Key size"/>
+                    <ComboBox ItemsSource="{Binding KeySizes}" SelectedItem="{Binding KeySize}" Width="120" HorizontalAlignment="Left"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <StackPanel Grid.Column="2">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="3" Content="Organisation (optional)"/>
+                    <TextBlock Style="{StaticResource Hint}" Text="Public CAs mostly ignore these for domain-validated certificates. Internal CAs and OV/EV certificates use them." Margin="0,0,0,4"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Organisation"/>
+                            <TextBox Text="{Binding Organisation}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="City"/>
+                            <TextBox Text="{Binding City}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Department"/>
+                            <TextBox Text="{Binding OrganisationalUnit}"/>
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="County / state"/>
+                            <TextBox Text="{Binding County}"/>
+                        </StackPanel>
+                    </Grid>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Country (2 letters)"/>
+                    <TextBox Text="{Binding Country}" Width="70" HorizontalAlignment="Left" MaxLength="2"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="4" Content="Generate"/>
+                    <Button Style="{StaticResource PrimaryButton}" Content="Create request" Command="{Binding GenerateCommand}" HorizontalAlignment="Left"/>
+                    <StackPanel Visibility="{Binding HasCsr, Converter={x:Static v:VisibleWhen.Instance}}" Margin="0,10,0,0">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="CSR: send this to your CA"/>
+                        <TextBox Style="{StaticResource MonoTextBox}" Text="{Binding Csr, Mode=OneWay}" Height="200"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button Content="Copy" Command="{Binding CopyCsrCommand}" Margin="0,0,8,0"/>
+                            <Button Content="Save .req…" Command="{Binding SaveCsrCommand}"/>
+                        </StackPanel>
+                        <TextBlock Style="{StaticResource Hint}" Text="When the CA sends the certificate back, go to Complete request."/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>
