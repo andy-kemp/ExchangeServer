@@ -160,7 +160,10 @@ public sealed class CertificateService
         try
         {
             var results = await _session.InvokeAsync("Get-AcceptedDomain", quiet: true);
-            return results.Select(o => o.Str("DomainName")).Where(d => d.Length > 0 && !d.Contains('*')).ToList();
+            // The default domain first
+            return results
+                .OrderByDescending(o => o.Str("Default").Equals("True", StringComparison.OrdinalIgnoreCase))
+                .Select(o => o.Str("DomainName")).Where(d => d.Length > 0 && !d.Contains('*')).ToList();
         }
         catch (Exception ex)
         {

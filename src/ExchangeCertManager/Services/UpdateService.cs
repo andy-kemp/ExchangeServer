@@ -119,7 +119,7 @@ public static class UpdateService
         }
         catch (UnauthorizedAccessException)
         {
-            throw new UnauthorizedAccessException($"Can't write to {dir}. Copy the app to a folder you can write to, such as C:\\ExchangeCertManager, and run it from there.");
+            throw new UnauthorizedAccessException($"Can't write to {dir}. Use File > Install, or copy the app to a folder you can write to, and run it from there.");
         }
 
         progress?.Report(("Checking the SHA-256…", null));
@@ -143,7 +143,33 @@ public static class UpdateService
             throw;
         }
         Log.Success($"Updated to version {info.Version}. The previous version is kept as {Path.GetFileName(old)} until the next start.");
+        UpdateOtherCopies(exe);
         return exe;
+    }
+
+    /// <summary>
+    /// Keeps the installed copy (Program Files) and the copy the renewal task runs in step, when the update was
+    /// run from somewhere else, so the nightly renewal always uses the latest version.
+    /// </summary>
+    private static void UpdateOtherCopies(string updatedExe)
+    {
+        var others = new[] { AppPaths.InstalledExe, RenewalTask.Info()?.ExePath ?? "" }
+            .Where(p => p.Length > 0 && File.Exists(p))
+            .Select(Path.GetFullPath)
+            .Where(p => !p.Equals(Path.GetFullPath(updatedExe), StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+        foreach (var other in others)
+        {
+            try
+            {
+                File.Copy(updatedExe, other, overwrite: true);
+                Log.Info($"Also updated {other}");
+            }
+            catch (Exception ex)
+            {
+                Log.Warn($"Couldn't update {other} ({ex.Message}). Update it from there, or copy the new EXE over it.");
+            }
+        }
     }
 
     /// <summary>Starts the updated EXE. The caller then closes this instance.</summary>

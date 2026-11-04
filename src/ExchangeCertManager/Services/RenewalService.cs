@@ -110,7 +110,7 @@ public static class RenewalRunner
 }
 
 /// <summary>What the registered task looks like now.</summary>
-public sealed record RenewalTaskInfo(string UserId, bool IsGmsa, DateTime? LastRun, int LastResult, DateTime? NextRun, string State);
+public sealed record RenewalTaskInfo(string UserId, bool IsGmsa, DateTime? LastRun, int LastResult, DateTime? NextRun, string State, string ExePath);
 
 /// <summary>
 /// Registers the daily renewal task through the Task Scheduler COM API, so the account password
@@ -123,9 +123,9 @@ public static class RenewalTask
     public const string TaskName = "Exchange Certificate Manager - Let's Encrypt renewal";
 
     /// <param name="password">The account's password, or null for a gMSA.</param>
-    public static void Register(string userName, SecureString? password)
+    /// <param name="exe">The EXE the task runs (the installed copy, normally).</param>
+    public static void Register(string userName, SecureString? password, string exe)
     {
-        var exe = Environment.ProcessPath ?? throw new InvalidOperationException("Can't find the app's own path.");
         var gmsa = password is null;
         if (gmsa && !userName.EndsWith('$')) userName += "$";
         var start = DateTime.Today.AddDays(1).AddHours(3).AddMinutes(17).ToString("s");
@@ -189,14 +189,43 @@ public static class RenewalTask
             DateTime next = task.NextRunTime;
             int result = task.LastTaskResult;
             int state = task.State;
+            string exe = "";
+            try { exe = task.Definition.Actions.Item(1).Path ?? ""; } catch { }
             static DateTime? Real(DateTime d) => d.Year < 2000 ? null : d;
             var stateText = state switch { 1 => "Disabled", 2 => "Queued", 3 => "Ready", 4 => "Running", _ => "Unknown" };
-            return new RenewalTaskInfo(user, user.EndsWith('$'), Real(last), result, Real(next), stateText);
+            return new RenewalTaskInfo(user, user.EndsWith('$'), Real(last), result, Real(next), stateText, exe);
         }
         catch
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Finds a gMSA in AD. Its sAMAccountName is at most 15 characters plus $, so a longer name given to
+    /// New-ADServiceAccount is cut short (gMSA_ExchangeCert becomes gMSA_ExchangeCe$); the short form is tried too.
+    /// </summary>
+    /// <returns>The DOMAIN\name$ Windows knows it by.</returns>
+    public static string ResolveGmsa(string name)
+    {
+        name = name.Trim();
+        var domain = name.Contains('\\') ? name[..name.IndexOf('\\')] : Environment.UserDomainName;
+        var account = (name.Contains('\\') ? name[(name.IndexOf('\\') + 1)..] : name).TrimEnd('$');
+        var candidates = new List<string> { account };
+        if (account.Length > 15) candidates.Add(account[..15]);
+        foreach (var c in candidates)
+        {
+            try
+            {
+                var sid = new NTAccount(domain, c + "$").Translate(typeof(SecurityIdentifier));
+                return ((NTAccount)sid.Translate(typeof(NTAccount))).Value;
+            }
+            catch (IdentityNotMappedException) { }
+        }
+        throw new InvalidOperationException(
+            $"AD has no account {domain}\\{account}$." +
+            (account.Length > 15 ? $" gMSA names are cut to 15 characters ({account[..15]}$), and that wasn't found either." : "") +
+            " Check the name with Get-ADServiceAccount (its SamAccountName), and that this server is in the same domain or a trusting one.");
     }
 
     /// <summary>Starts the task now (as its own account), to prove it works.</summary>
