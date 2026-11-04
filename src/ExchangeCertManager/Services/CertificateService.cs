@@ -39,10 +39,35 @@ public sealed class CertificateService
             .ToList();
     }
 
+    /// <summary>What the app reads from Get-ExchangeCertificate (see <see cref="ExchangeSession.InvokeAsync"/>'s select).</summary>
+    private static readonly string[] CertificateProperties =
+    {
+        "Thumbprint", "Subject", "Issuer", "FriendlyName", "NotBefore", "NotAfter", "CertificateDomains", "Services",
+        "Status", "IsSelfSigned", "HasPrivateKey", "PrivateKeyExportable",
+    };
+
     public async Task<List<ServerCertificate>> GetCertificatesAsync(string server)
     {
-        var results = await _session.InvokeAsync("Get-ExchangeCertificate", new Dictionary<string, object?> { ["Server"] = server });
-        return results.Select(o => ServerCertificate.From(server, o)).ToList();
+        IReadOnlyList<System.Management.Automation.PSObject> results;
+        try
+        {
+            results = await _session.InvokeAsync("Get-ExchangeCertificate", new Dictionary<string, object?> { ["Server"] = server },
+                select: CertificateProperties);
+        }
+        catch (ExchangeCommandException ex) when (ex.Message.Contains("Select-Object", StringComparison.OrdinalIgnoreCase))
+        {
+            // An endpoint without Select-Object: fall back to the objects as they come
+            results = await _session.InvokeAsync("Get-ExchangeCertificate", new Dictionary<string, object?> { ["Server"] = server }, quiet: true);
+        }
+        var certs = results.Select(o => ServerCertificate.From(server, o)).ToList();
+        if (certs.Any(c => c.Thumbprint.Length == 0))
+        {
+            var sample = results.First(o => o.Str("Thumbprint").Length == 0);
+            Log.Warn($"Get-ExchangeCertificate on {server} returned a certificate without a thumbprint " +
+                     $"(type {string.Join(" / ", sample.TypeNames.Take(2))}; properties {string.Join(", ", sample.Properties.Select(p => p.Name).Take(20))}). It's left out.");
+            certs.RemoveAll(c => c.Thumbprint.Length == 0);
+        }
+        return certs;
     }
 
     public async Task<(List<CertificateGroup> Groups, List<string> FailedServers)> GetInventoryAsync(IEnumerable<ExchangeServerInfo> servers)
@@ -314,7 +339,7 @@ public sealed class CertificateService
         var leaf = fromFile() ?? throw new InvalidOperationException("Exchange didn't say what it imported, and the certificate couldn't be read from the file.");
         var thumb = leaf.Thumbprint;
         var check = await _session.InvokeAsync("Get-ExchangeCertificate",
-            new Dictionary<string, object?> { ["Server"] = server, ["Thumbprint"] = thumb }, quiet: true);
+            new Dictionary<string, object?> { ["Server"] = server, ["Thumbprint"] = thumb }, quiet: true, select: CertificateProperties);
         if (!check.Any())
             throw new InvalidOperationException($"Exchange reported no error, but {thumb} ({leaf.Subject}) isn't on {server}.");
         Log.Info($"Exchange didn't return the imported certificate; found it on {server} by its thumbprint");

@@ -69,8 +69,11 @@ public sealed class ExchangeSession : IDisposable
     /// Runs one Exchange cmdlet. A parameter with a null value is sent as a switch (e.g. -Force).
     /// Throws if the cmdlet writes any error.
     /// </summary>
+    /// <param name="select">If set, the results are piped through Select-Object -Property, so they come back as plain
+    /// property bags. Needed for Get-ExchangeCertificate: its objects are X509Certificate2s, which PowerShell 7 can
+    /// turn back into empty certificates on this side, losing the thumbprint, names and dates.</param>
     public async Task<IReadOnlyList<PSObject>> InvokeAsync(string command, IDictionary<string, object?>? parameters = null,
-        bool quiet = false, CancellationToken ct = default)
+        bool quiet = false, CancellationToken ct = default, IReadOnlyList<string>? select = null)
     {
         await _gate.WaitAsync(ct);
         try
@@ -89,6 +92,8 @@ public sealed class ExchangeSession : IDisposable
                         else ps.AddParameter(name, value);
                     }
                 }
+
+                if (select is { Count: > 0 }) ps.AddCommand("Select-Object").AddParameter("Property", select.ToArray());
 
                 if (!quiet) Log.Info($"> {Describe(command, parameters)}");
 
