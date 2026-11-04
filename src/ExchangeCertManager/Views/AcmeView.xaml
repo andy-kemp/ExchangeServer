@@ -35,9 +35,28 @@
                     <StackPanel>
                         <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="3" Content="Validation"/>
                         <RadioButton IsChecked="{Binding UseHttp}"><TextBlock Text="HTTP: challenge file in IIS (port 80 must reach Exchange)" TextWrapping="Wrap"/></RadioButton>
-                        <RadioButton IsChecked="{Binding UseDns}" Margin="0,6,0,0"><TextBlock Text="DNS: you add TXT records (needed for wildcards)" TextWrapping="Wrap"/></RadioButton>
+                        <RadioButton IsChecked="{Binding UseCloudflare}" Margin="0,6,0,0"><TextBlock Text="DNS: Cloudflare adds the TXT records for you (wildcards, no port 80, renews unattended)" TextWrapping="Wrap"/></RadioButton>
+                        <RadioButton IsChecked="{Binding UseDns}" Margin="0,6,0,0"><TextBlock Text="DNS: you add the TXT records yourself (can't renew unattended)" TextWrapping="Wrap"/></RadioButton>
                         <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,0"
-                                   Text="HTTP writes the file to every selected server, so it works behind a load balancer. Only HTTP renewals run unattended."/>
+                                   Text="HTTP writes the file to every selected server, so it works behind a load balancer. HTTP and Cloudflare renewals run unattended."/>
+
+                        <!-- Cloudflare API token: only when Cloudflare is picked -->
+                        <StackPanel Margin="0,10,0,0" Visibility="{Binding UseCloudflare, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBlock Style="{StaticResource FieldLabel}" Text="Cloudflare API token"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <PasswordBox x:Name="CloudflareTokenBox" PasswordChanged="OnCloudflareTokenChanged" ToolTip="Paste the token; it's checked with Cloudflare before it's saved"/>
+                                <Button Grid.Column="1" Content="Test and save" Command="{Binding SaveCloudflareTokenCommand}" Margin="8,0,0,0"/>
+                                <Button Grid.Column="2" Content="Remove" Command="{Binding RemoveCloudflareTokenCommand}" Margin="6,0,0,0"/>
+                            </Grid>
+                            <TextBlock Text="{Binding CloudflareStatus}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="12.5"/>
+                            <TextBlock Style="{StaticResource Hint}"
+                                       Text="In Cloudflare: My Profile > API Tokens > Create Token > 'Edit zone DNS' template, with Zone Resources set to the zone(s) these names are in. It's stored encrypted on this machine (Administrators and SYSTEM only), never in the log, so the renewal task can use it."/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -73,7 +92,7 @@
                         <TextBlock Style="{StaticResource Hint}" Text="Leave SMTP off if you're hybrid: Let's Encrypt certificates renew every 60-90 days with a changing issuer, and connectors pinned by TlsCertificateName will break."/>
 
                         <CheckBox IsChecked="{Binding RemoveOld}" Margin="0,10,0,0"><TextBlock Text="Remove the previous Let's Encrypt certificate after renewal" TextWrapping="Wrap"/></CheckBox>
-                        <CheckBox Content="Save for automatic renewal (HTTP only)" IsChecked="{Binding SaveForRenewal}" Margin="0,6,0,0"/>
+                        <CheckBox Content="Save for automatic renewal" IsChecked="{Binding SaveForRenewal}" IsEnabled="{Binding CanRenewUnattended}" Margin="0,6,0,0"/>
 
                         <Button Style="{StaticResource PrimaryButton}" Content="Get certificate" Command="{Binding IssueCommand}" HorizontalAlignment="Left" Margin="0,14,0,0"/>
                     </StackPanel>
@@ -89,6 +108,7 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="NAMES" Binding="{Binding DomainsText}" Width="2*"/>
                         <DataGridTextColumn Header="SERVERS" Binding="{Binding ServersText}" Width="*"/>
+                        <DataGridTextColumn Header="METHOD" Binding="{Binding MethodText}" Width="120"/>
                         <DataGridTextColumn Header="EXPIRES" Binding="{Binding NotAfter, Converter={x:Static v:DateText.Instance}}" Width="110"/>
                         <DataGridCheckBoxColumn Header="STAGING" Binding="{Binding Staging}" Width="80"/>
                         <DataGridTextColumn Header="LAST RESULT" Binding="{Binding LastResult}" Width="1.5*"/>
