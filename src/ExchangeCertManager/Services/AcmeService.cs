@@ -22,8 +22,9 @@ public sealed record AcmeIssueRequest(
 
 /// <summary>
 /// Let's Encrypt issuance with Certes. HTTP-01 drops the challenge file into the Default Web Site
-/// on every selected server (so it works behind a load balancer). DNS-01 is manual: the UI shows
-/// the TXT records and waits for you to add them. Wildcards need DNS-01.
+/// on every selected server (so it works behind a load balancer). DNS-01 is either manual (the UI shows
+/// the TXT records and waits for you to add them) or through the Cloudflare API, which adds and removes
+/// them itself and so can renew unattended. Wildcards need DNS-01.
 /// </summary>
 public sealed class AcmeService
 {
@@ -31,6 +32,9 @@ public sealed class AcmeService
 
     /// <summary>Called for DNS-01 with (record name, TXT value). Return when the records are in DNS.</summary>
     public Func<IReadOnlyList<(string Name, string Value)>, Task>? ConfirmDnsRecords { get; set; }
+
+    /// <summary>Used for <see cref="AcmeChallengeType.Dns01Cloudflare"/>; the saved token if not set.</summary>
+    public CloudflareDns? Cloudflare { get; set; }
 
     public async Task<(byte[] Pfx, string Password, DateTime NotAfter)> IssueAsync(AcmeIssueRequest req, IProgress<string>? progress = null, CancellationToken ct = default)
     {
@@ -77,18 +81,42 @@ public sealed class AcmeService
                     pending.Add((authz, challenge, host));
                 }
 
-                if (records.Count > 0)
+                var added = new List<(string ZoneId, string RecordId, string Name)>();
+                try
                 {
-                    if (ConfirmDnsRecords is null) throw new InvalidOperationException("The DNS challenge needs someone to add the records.");
-                    progress?.Report("Waiting for DNS records");
-                    await ConfirmDnsRecords(records);
-                }
+                    if (records.Count > 0 && req.Challenge == AcmeChallengeType.Dns01Cloudflare)
+                    {
+                        var cf = Cloudflare ?? CloudflareDns.FromSavedToken();
+                        foreach (var (name, value) in records)
+                        {
+                            progress?.Report($"Adding {name} in Cloudflare");
+                            var (zoneId, recordId) = await cf.AddTxtAsync(name, value, ct);
+                            added.Add((zoneId, recordId, name));
+                        }
+                        await CloudflareDns.WaitForRecordsAsync(records, progress, ct);
+                    }
+                    else if (records.Count > 0)
+                    {
+                        if (ConfirmDnsRecords is null) throw new InvalidOperationException("The DNS challenge needs someone to add the records.");
+                        progress?.Report("Waiting for DNS records");
+                        await ConfirmDnsRecords(records);
+                    }
 
-                foreach (var (authz, challenge, host) in pending)
+                    foreach (var (authz, challenge, host) in pending)
+                    {
+                        progress?.Report($"Validating {host}");
+                        await challenge.Validate();
+                        await WaitForValidAsync(authz, host, ct);
+                    }
+                }
+                finally
                 {
-                    progress?.Report($"Validating {host}");
-                    await challenge.Validate();
-                    await WaitForValidAsync(authz, host, ct);
+                    // Always tidy up the challenge records, whatever happened
+                    if (added.Count > 0)
+                    {
+                        var cf = Cloudflare ?? CloudflareDns.FromSavedToken();
+                        foreach (var (zoneId, recordId, name) in added) await cf.RemoveAsync(zoneId, recordId, name);
+                    }
                 }
             }
         }

@@ -195,6 +195,16 @@ public static class DemoMode
                     NotAfter = DateTime.Now.AddDays(71),
                     LastResult = "Issued 4C5D6E7F8091A2B3C4D5E6F708192A3B4C5D6E7F",
                 });
+                main.Acme.Renewals.Add(new AcmeRenewal
+                {
+                    Domains = new() { "*.contoso.com", "contoso.com" },
+                    Servers = new() { "EX01", "EX02" },
+                    Challenge = AcmeChallengeType.Dns01Cloudflare,
+                    NotAfter = DateTime.Now.AddDays(58),
+                    LastResult = "Issued 9A8B7C6D5E4F30211A2B3C4D5E6F708192A3B4C",
+                });
+                main.Acme.Challenge = AcmeChallengeType.Dns01Cloudflare;
+                main.Acme.CloudflareStatus = "Token saved. It can edit: contoso.com.";
                 main.Acme.TaskStatus = "The daily renewal task is registered. It renews anything within 30 days of expiry.";
             }),
             ("connect", "01-connect.png", null),

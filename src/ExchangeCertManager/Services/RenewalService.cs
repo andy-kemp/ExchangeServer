@@ -79,12 +79,20 @@ public static class RenewalRunner
                 continue;
             }
 
+            if (def.Challenge == AcmeChallengeType.Dns01Manual)
+            {
+                Log.Warn($"{def.DomainsText}: uses manual DNS, so it can't renew unattended. Renew it from the Let's Encrypt page.");
+                def.LastRun = DateTime.Now;
+                def.LastResult = "Due: manual DNS, renew from the app";
+                continue;
+            }
+
             try
             {
                 using var session = await ExchangeSession.ConnectAsync(def.ConnectServer, credential: null);
                 var certs = new CertificateService(session);
                 var progress = new Progress<string>(m => Log.Info(m));
-                await AcmeDeployer.IssueAndDeployAsync(certs, new AcmeService(), def, AcmeChallengeType.Http01, progress);
+                await AcmeDeployer.IssueAndDeployAsync(certs, new AcmeService(), def, def.Challenge, progress);
                 Log.Success($"{def.DomainsText}: renewed");
             }
             catch (Exception ex)

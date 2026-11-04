@@ -135,7 +135,7 @@ public sealed record HealthItem(HealthSeverity Severity, string Area, string Ser
     public bool HasFix => Fix is not null;
 }
 
-public enum AcmeChallengeType { Http01, Dns01Manual }
+public enum AcmeChallengeType { Http01, Dns01Manual, Dns01Cloudflare }
 
 /// <summary>Saved definition used by the scheduled Let's Encrypt renewal.</summary>
 public sealed class AcmeRenewal
@@ -149,6 +149,8 @@ public sealed class AcmeRenewal
     public Dictionary<string, string> Webroots { get; set; } = new();
     public List<string> Services { get; set; } = new() { "IIS" };
     public bool RemoveOldCertificate { get; set; } = true;
+    /// <summary>How it's validated on renewal. Saved definitions from before 1.3.0 have none, which means HTTP.</summary>
+    public AcmeChallengeType Challenge { get; set; } = AcmeChallengeType.Http01;
     public string? LastThumbprint { get; set; }
     public DateTime? NotAfter { get; set; }
     public DateTime? LastRun { get; set; }
@@ -156,6 +158,12 @@ public sealed class AcmeRenewal
 
     public string DomainsText => string.Join(", ", Domains);
     public string ServersText => string.Join(", ", Servers);
+    public string MethodText => Challenge switch
+    {
+        AcmeChallengeType.Dns01Cloudflare => "DNS (Cloudflare)",
+        AcmeChallengeType.Dns01Manual => "DNS (manual)",
+        _ => "HTTP",
+    };
 }
 
 public sealed record VdirKind(string Key, string Label, string GetCommand, string SetCommand, string Path);
