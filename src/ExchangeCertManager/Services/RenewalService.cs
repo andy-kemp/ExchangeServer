@@ -225,7 +225,7 @@ public static class RenewalTask
         throw new InvalidOperationException(
             $"AD has no account {domain}\\{account}$." +
             (account.Length > 15 ? $" gMSA names are cut to 15 characters ({account[..15]}$), and that wasn't found either." : "") +
-            " Check the name with Get-ADServiceAccount (its SamAccountName), and that this server is in the same domain or a trusting one.");
+            " Use Create gMSA to set one up, or check the name with Get-ADServiceAccount (its SamAccountName).");
     }
 
     /// <summary>Starts the task now (as its own account), to prove it works.</summary>

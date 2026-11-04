@@ -169,6 +169,27 @@ public sealed partial class AcmeViewModel : PageViewModel
     private void RefreshTask() => ReloadRenewals();
 
     [RelayCommand]
+    private async Task CreateGmsaAsync()
+    {
+        if (State.IsDemo) { AppState.Inform("Nothing is created in demo mode."); return; }
+        var options = CreateGmsaDialog.Show(DefaultGmsaName);
+        if (options is null) return;
+        GmsaSetupResult? result = null;
+        var ok = await State.RunAsync($"Setting up the gMSA {options.Name}", async () =>
+        {
+            result = await GmsaSetupService.RunAsync(State.Session!, options, new Progress<string>(State.SetBusyText));
+        });
+        if (!ok || result is null) return;
+        if (result.Account.Length > 0)
+        {
+            UseGmsa = true;
+            TaskUser = result.Account;
+        }
+        if (result.Ready) Log.Success(result.Message); else Log.Warn(result.Message);
+        AppState.Inform(result.Ready ? $"{result.Message}\n\nNow click Register task, then Run task now to check it." : result.Message);
+    }
+
+    [RelayCommand]
     private Task SuggestAsync() => State.RunAsync("Reading the configured URLs", async () =>
     {
         var server = Servers.FirstOrDefault(s => s.IsSelected)?.Name ?? State.Servers.FirstOrDefault()?.Name;
