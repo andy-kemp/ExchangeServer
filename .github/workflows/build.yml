@@ -3,12 +3,11 @@ name: Build
 on:
   push:
     branches: [ main ]
-    tags: [ 'v*' ]
   pull_request:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -49,9 +48,47 @@ jobs:
           path: publish/ExchangeCertManager.exe
           if-no-files-found: error
 
-      - name: Publish the release (tags only)
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+  # Publishes main builds to downloads.andykemp.com (R2 bucket akc-downloads) when the version in the project
+  # file is new: exchange-cert-manager/<version>/ and exchange-cert-manager/latest/. A version is never overwritten,
+  # so bump <Version> in ExchangeCertManager.csproj to release. Needs CLOUDFLARE_API_TOKEN (R2 edit) and
+  # CLOUDFLARE_ACCOUNT_ID repository secrets.
+  publish:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
         with:
-          files: publish/ExchangeCertManager.exe
-          generate_release_notes: true
+          name: ExchangeCertManager
+          path: out
+
+      - name: Upload to downloads.andykemp.com
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set, so nothing was published"; exit 0
+          fi
+          version=$(grep -oP '(?<=<Version>)[^<]+' src/ExchangeCertManager/ExchangeCertManager.csproj)
+          bucket=akc-downloads; base=exchange-cert-manager
+          if npx --yes wrangler@4 r2 object get "$bucket/$base/$version/SHA256SUMS.txt" --remote --pipe > /dev/null 2>&1; then
+            echo "Version $version is already published; bump <Version> to release a new one."; exit 0
+          fi
+          cd out
+          sha256sum ExchangeCertManager.exe > SHA256SUMS.txt
+          printf '{"version":"%s","file":"ExchangeCertManager.exe","sha256":"%s","published":"%s"}\n' \
+            "$version" "$(cut -d' ' -f1 SHA256SUMS.txt)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > version.json
+          put() { npx --yes wrangler@4 r2 object put "$bucket/$1" --file "$2" --content-type "$3" --cache-control "$4" --remote; }
+          long='public, max-age=31536000, immutable'; short='public, max-age=300'
+          put "$base/$version/ExchangeCertManager.exe" ExchangeCertManager.exe application/vnd.microsoft.portable-executable "$long"
+          put "$base/$version/version.json" version.json application/json "$long"
+          put "$base/latest/ExchangeCertManager.exe" ExchangeCertManager.exe application/vnd.microsoft.portable-executable "$short"
+          put "$base/latest/version.json" version.json application/json "$short"
+          put "$base/latest/SHA256SUMS.txt" SHA256SUMS.txt text/plain "$short"
+          # Written last: its presence is what marks the version as published, so a failed run can simply be re-run
+          put "$base/$version/SHA256SUMS.txt" SHA256SUMS.txt text/plain "$long"
+          echo "Published $version: https://downloads.andykemp.com/$base/latest/ExchangeCertManager.exe" >> "$GITHUB_STEP_SUMMARY"
