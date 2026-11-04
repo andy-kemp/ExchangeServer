@@ -27,14 +27,21 @@ public sealed class ExchangeSession : IDisposable
     private readonly Runspace _runspace;
     private readonly SemaphoreSlim _gate = new(1, 1);
 
+    /// <summary>Pass as a parameter value to send an explicit $null (for example to clear a URL).</summary>
+    public static readonly object Null = new();
+
     public string ConnectedServer { get; }
     public string ConnectedAs { get; }
 
-    private ExchangeSession(Runspace runspace, string server, string connectedAs)
+    /// <summary>The credential used to connect, or null for the signed-in account. Reused for server-level tasks.</summary>
+    public PSCredential? Credential { get; }
+
+    private ExchangeSession(Runspace runspace, string server, string connectedAs, PSCredential? credential)
     {
         _runspace = runspace;
         ConnectedServer = server;
         ConnectedAs = connectedAs;
+        Credential = credential;
     }
 
     /// <param name="credential">Null to use the signed-in Windows account (Kerberos).</param>
@@ -55,7 +62,7 @@ public sealed class ExchangeSession : IDisposable
 
         var who = credential?.UserName ?? $"{Environment.UserDomainName}\\{Environment.UserName}";
         Log.Success($"Connected to {serverFqdn} as {who}");
-        return new ExchangeSession(runspace, serverFqdn, who);
+        return new ExchangeSession(runspace, serverFqdn, who, credential);
     }
 
     /// <summary>
@@ -78,6 +85,7 @@ public sealed class ExchangeSession : IDisposable
                     foreach (var (name, value) in parameters)
                     {
                         if (value is null) ps.AddParameter(name);
+                        else if (ReferenceEquals(value, Null)) ps.AddParameter(name, null);
                         else ps.AddParameter(name, value);
                     }
                 }
@@ -111,16 +119,20 @@ public sealed class ExchangeSession : IDisposable
         }
     }
 
-    private static string Describe(string command, IDictionary<string, object?>? parameters)
+    /// <summary>The command as it would be typed in the Exchange Management Shell (secrets masked).</summary>
+    public static string Describe(string command, IDictionary<string, object?>? parameters)
     {
         if (parameters is null || parameters.Count == 0) return command;
         var parts = parameters.Select(p => p.Value switch
         {
             null => $"-{p.Key}",
+            var v when ReferenceEquals(v, Null) => $"-{p.Key} $null",
+            bool b => $"-{p.Key}:${b.ToString().ToLowerInvariant()}",
+            DateTime d => $"-{p.Key} '{d:yyyy-MM-dd HH:mm}'",
             SecureString => $"-{p.Key} ********",
             byte[] b => $"-{p.Key} <{b.Length:N0} bytes>",
             string s => $"-{p.Key} '{s}'",
-            IEnumerable e => $"-{p.Key} {string.Join(",", e.Cast<object>())}",
+            IEnumerable e => e.Cast<object>().Any() ? $"-{p.Key} {string.Join(",", e.Cast<object>())}" : $"-{p.Key} @()",
             _ => $"-{p.Key} {p.Value}",
         });
         return $"{command} {string.Join(" ", parts)}";

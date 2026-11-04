@@ -91,6 +91,17 @@ public sealed class CertificateService
         }
     }
 
+    public async Task<string?> GetPreviousAuthThumbprintAsync()
+    {
+        try
+        {
+            var r = (await _session.InvokeAsync("Get-AuthConfig", quiet: true)).FirstOrDefault();
+            var prev = r?.Str("PreviousCertificateThumbprint");
+            return string.IsNullOrEmpty(prev) ? null : prev;
+        }
+        catch { return null; }
+    }
+
     /// <summary>
     /// Hostnames clients use to reach this server, from the virtual directories, Outlook Anywhere
     /// and the Autodiscover SCP. Used for SAN suggestions and the health check.

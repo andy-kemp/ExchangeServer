@@ -78,9 +78,9 @@ public static class DemoMode
                 Installs = new()
                 {
                     Cert("EX01", "9F8E7D6C5B4A39281706F5E4D3C2B1A098765432", "CN=Microsoft Exchange Server Auth Certificate", "CN=Microsoft Exchange Server Auth Certificate",
-                        "Microsoft Exchange Server Auth Certificate", 1288, "SMTP", Array.Empty<string>(), selfSigned: true),
+                        "Microsoft Exchange Server Auth Certificate", 41, "SMTP", Array.Empty<string>(), selfSigned: true),
                     Cert("EX02", "9F8E7D6C5B4A39281706F5E4D3C2B1A098765432", "CN=Microsoft Exchange Server Auth Certificate", "CN=Microsoft Exchange Server Auth Certificate",
-                        "Microsoft Exchange Server Auth Certificate", 1288, "SMTP", Array.Empty<string>(), selfSigned: true),
+                        "Microsoft Exchange Server Auth Certificate", 41, "SMTP", Array.Empty<string>(), selfSigned: true),
                 },
             },
             new()
@@ -109,19 +109,38 @@ public static class DemoMode
             new HealthItem(HealthSeverity.Error, "Client access", "EX02", "mail.contoso.com doesn't cover all configured URLs",
                 "Not on the certificate: legacy.contoso.com. Either add these names at renewal or change the virtual directory URLs."),
             new HealthItem(HealthSeverity.Error, "Mail flow", "EX01", "Send connector 'Outbound to Office 365 - 3f8a' points at a certificate that isn't installed",
-                "TlsCertificateName is <I>CN=DigiCert Global G2 TLS RSA SHA256 2020 CA1, O=DigiCert Inc, C=US<S>CN=mail.contoso.com, O=Contoso Limited. Update it with Set-SendConnector -TlsCertificateName for the new certificate. Hybrid connectors are the usual culprit."),
+                "TlsCertificateName is <I>CN=DigiCert Global G2 TLS RSA SHA256 2020 CA1, O=DigiCert Inc, C=US<S>CN=mail.contoso.com, O=Contoso Limited. Point it at the current certificate. Hybrid connectors are the usual culprit.")
+                { Fix = new HealthFix(HealthFixKind.UpdateConnectorCertificate, "Update connector…") },
+            new HealthItem(HealthSeverity.Warning, "Auth certificate", "", "The Exchange Auth certificate expires in 41 days",
+                "Renew it before it expires; staged renewal takes 49 hours to go live. Re-run the Hybrid Configuration Wizard afterwards if you're hybrid. No next certificate is staged.")
+                { Fix = new HealthFix(HealthFixKind.RenewAuthCertificate, "Renew…") },
             new HealthItem(HealthSeverity.Warning, "Consistency", "EX02", "*.contoso.com isn't on every server",
                 "Behind a load balancer, clients hitting these servers get a different certificate. Use Deploy to copy it across."),
             new HealthItem(HealthSeverity.Info, "Clean-up", "EX01", "Expired, unused: mail.contoso.com",
                 "Thumbprint 0B1C2D3E4F5061728394A5B6C7D8E9F001122334. Safe to remove once you've checked nothing references it."),
             new HealthItem(HealthSeverity.Info, "Clean-up", "EX01", "1 pending request(s)",
                 "Complete them with the CA response, or remove them if they were abandoned."),
-            new HealthItem(HealthSeverity.Ok, "Auth certificate", "", "Exchange Auth certificate valid for 1288 days", "No next certificate is staged."),
             new HealthItem(HealthSeverity.Ok, "Client access", "EX01", "Certificate covers every configured URL",
                 "mail.contoso.com covers autodiscover.contoso.com, ex01.ad.contoso.com, mail.contoso.com, owa.contoso.com."),
         }) main.Health.Items.Add(h);
-        main.Health.Summary = "2 problem(s) to fix and 1 warning(s).";
+        main.Health.Summary = "2 problem(s) to fix and 2 warning(s).";
         main.Health.LastRun = now;
+
+        var vd = new List<VdirEntry>();
+        foreach (var (srv, fqdn, ext) in new[] { ("EX01", "ex01.ad.contoso.com", "mail.contoso.com"), ("EX02", "ex02.ad.contoso.com", "") })
+        {
+            foreach (var k in VirtualDirectoryService.UrlKinds)
+                vd.Add(new VdirEntry
+                {
+                    Server = srv, Kind = k.Key, Label = k.Label, Identity = $"{srv}\\{k.Path.Trim('/').Split('/')[0]} (Default Web Site)",
+                    Internal = $"https://{fqdn}{k.Path}", External = ext.Length == 0 ? "" : $"https://{ext}{k.Path}",
+                });
+            vd.Add(new VdirEntry { Server = srv, Kind = VirtualDirectoryService.OutlookAnywhere, Label = "Outlook Anywhere (hostnames)", Identity = $"{srv}\\Rpc (Default Web Site)", Internal = fqdn, External = ext });
+            vd.Add(new VdirEntry { Server = srv, Kind = VirtualDirectoryService.Autodiscover, Label = "Autodiscover (internal SCP)", Identity = srv, Internal = $"https://{fqdn}/Autodiscover/Autodiscover.xml" });
+        }
+        main.Urls.OnShown();
+        main.Urls.Load(vd);
+        main.Urls.PreviewCommand.Execute(null);
 
         main.Request.Server = ex01;
         main.Request.CommonName = "mail.contoso.com";
@@ -155,6 +174,7 @@ public static class DemoMode
         {
             ("inventory", "02-certificates.png", () => main.Inventory.Selected = AppState.Current.Inventory.FirstOrDefault()),
             ("health", "03-health.png", null),
+            ("urls", "09-virtual-directories.png", null),
             ("request", "04-request.png", null),
             ("complete", "05-complete.png", null),
             ("import", "06-import.png", () =>
