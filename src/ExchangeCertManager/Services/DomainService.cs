@@ -52,6 +52,15 @@ public sealed class DomainService
     public static bool IsMicrosoftDomain(string domain) =>
         domain.EndsWith(".onmicrosoft.com", StringComparison.OrdinalIgnoreCase) || domain.EndsWith(".onmicrosoft.us", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>Exchange's DomainType enum can arrive as its number.</summary>
+    private static string DomainTypeName(string value) => value switch
+    {
+        "0" => "Authoritative",
+        "1" => "ExternalRelay",
+        "2" => "InternalRelay",
+        _ => value,
+    };
+
     private static string DomainOf(string template)
     {
         var at = template.LastIndexOf('@');
@@ -60,19 +69,19 @@ public sealed class DomainService
 
     public async Task<List<AcceptedDomainInfo>> GetDomainsAsync()
     {
-        var results = await _session.InvokeAsync("Get-AcceptedDomain", select: new[] { "Name", "DomainName", "DomainType", "Default" });
+        var results = await _session.InvokeAsync("Get-AcceptedDomain");
         return results.Select(o => new AcceptedDomainInfo
         {
             Name = o.Str("Name"),
-            DomainName = o.Str("DomainName").ToLowerInvariant(),
-            DomainType = o.Str("DomainType"),
+            DomainName = (o.Str("DomainName") is { Length: > 0 } d ? d : o.Str("Name")).ToLowerInvariant(),
+            DomainType = DomainTypeName(o.Str("DomainType")),
             Default = o.Bool("Default"),
         }).OrderByDescending(d => d.Default).ThenBy(d => d.IsMicrosoft).ThenBy(d => d.DomainName).ToList();
     }
 
     public async Task<List<AddressPolicyInfo>> GetPoliciesAsync()
     {
-        var results = await _session.InvokeAsync("Get-EmailAddressPolicy", select: new[] { "Name", "Priority", "EnabledEmailAddressTemplates", "RecipientFilter" });
+        var results = await _session.InvokeAsync("Get-EmailAddressPolicy");
         return results.Select(o => new AddressPolicyInfo
         {
             Name = o.Str("Name"),
@@ -134,14 +143,12 @@ public sealed class DomainService
 
         progress?.Report("Reading every recipient's addresses");
         var recipients = (await _session.InvokeAsync("Get-Recipient",
-            new Dictionary<string, object?> { ["ResultSize"] = "Unlimited" }, quiet: true,
-            select: new[] { "Name", "Identity", "RecipientTypeDetails", "PrimarySmtpAddress", "EmailAddresses" })).ToList();
+            new Dictionary<string, object?> { ["ResultSize"] = "Unlimited" }, quiet: true)).ToList();
         // System (arbitration) mailboxes aren't in Get-Recipient
         try
         {
             recipients.AddRange(await _session.InvokeAsync("Get-Mailbox",
-                new Dictionary<string, object?> { ["Arbitration"] = null, ["ResultSize"] = "Unlimited" }, quiet: true,
-                select: new[] { "Name", "Identity", "RecipientTypeDetails", "PrimarySmtpAddress", "EmailAddresses" }));
+                new Dictionary<string, object?> { ["Arbitration"] = null, ["ResultSize"] = "Unlimited" }, quiet: true));
         }
         catch (Exception ex) { Log.Warn($"Couldn't read the arbitration mailboxes: {ex.Message}"); }
 
@@ -160,7 +167,7 @@ public sealed class DomainService
             if (p.Templates.Any(t => DomainOf(t) == domain)) usage.Policies.Add(p.Name);
         try
         {
-            foreach (var c in await _session.InvokeAsync("Get-SendConnector", quiet: true, select: new[] { "Name", "AddressSpaces" }))
+            foreach (var c in await _session.InvokeAsync("Get-SendConnector", quiet: true))
                 if (c.List("AddressSpaces").Any(a => a.Contains(domain, StringComparison.OrdinalIgnoreCase))) usage.Connectors.Add(c.Str("Name"));
         }
         catch { }

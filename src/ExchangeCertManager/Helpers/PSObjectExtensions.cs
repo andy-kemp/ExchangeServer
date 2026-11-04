@@ -17,6 +17,8 @@ public static class PSObjectExtensions
 
     public static string Str(this PSObject obj, string name)
     {
+        // A nested object that came back as a property bag: its ToString is the serialised text
+        if (obj.Properties[name]?.Value is PSObject { BaseObject: PSCustomObject } bag) return bag.ToString() ?? string.Empty;
         var value = obj.Raw(name);
         if (value is null) return string.Empty;
         if (value is string s) return s;
