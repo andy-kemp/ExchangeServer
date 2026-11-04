@@ -20,6 +20,7 @@ public sealed partial class AppState : ObservableObject
     public CertificateService? Certs { get; private set; }
     public HealthService? Health { get; private set; }
     public VirtualDirectoryService? Vdirs { get; private set; }
+    public DomainService? Domains { get; private set; }
     public FixService? Fixes { get; private set; }
 
     public bool IsDemo => DemoConnection is not null && Session is null;
@@ -59,6 +60,7 @@ public sealed partial class AppState : ObservableObject
         Certs = value is null ? null : new CertificateService(value);
         Health = value is null || Certs is null ? null : new HealthService(value, Certs);
         Vdirs = value is null ? null : new VirtualDirectoryService(value);
+        Domains = value is null ? null : new DomainService(value);
         Fixes = value is null || Certs is null ? null : new FixService(value, Certs);
         OnPropertyChanged(nameof(IsConnected));
         OnPropertyChanged(nameof(ConnectionText));
