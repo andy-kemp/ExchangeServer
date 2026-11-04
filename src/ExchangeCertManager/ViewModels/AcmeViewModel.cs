@@ -148,7 +148,7 @@ public sealed partial class AcmeViewModel : PageViewModel
     {
         if (State.IsDemo) { AppState.Inform("Nothing runs in demo mode."); return; }
         if (!RenewalTask.Exists()) { AppState.Inform("Register the task first."); return; }
-        if (!AppState.Confirm("Run the renewal task now, as its own account? It only renews certificates that are due, so this is a safe way to check the account works. Refresh the page in a minute to see the result.")) return;
+        if (!AppState.Confirm("Run the renewal task now, as its own account? It checks everything a renewal needs (it connects to Exchange, reads the certificates and tests the Cloudflare token) and only renews certificates that are due. The result appears in the Last result column in a minute or so.")) return;
         try { RenewalTask.RunNow(); }
         catch (Exception ex) { AppState.Inform($"Couldn't start the task: {ex.Message}"); return; }
         _ = RefreshTaskStatusLaterAsync();

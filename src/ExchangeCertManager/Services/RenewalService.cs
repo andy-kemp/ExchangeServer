@@ -1,3 +1,4 @@
+using System.IO;
 using System.Security;
 using System.Security.Principal;
 using ExchangeCertManager.Models;
@@ -59,6 +60,12 @@ public static class RenewalRunner
     public const string Argument = "--renew-acme";
     public const int RenewWithinDays = 30;
 
+    /// <summary>
+    /// Written by "Run task now": the next run also checks everything a renewal needs, as the task's own account,
+    /// even though nothing is due: it connects to Exchange, reads the certificates and tests the Cloudflare token.
+    /// </summary>
+    public static string CheckFlag => Path.Combine(AppPaths.ProgramData, "check-next-run");
+
     public static async Task<int> RunAsync(bool force)
     {
         Log.Info($"Scheduled Let's Encrypt renewal started as {WindowsIdentity.GetCurrent().Name}");
@@ -67,6 +74,14 @@ public static class RenewalRunner
         {
             Log.Info("No renewals are configured.");
             return 0;
+        }
+
+        var check = File.Exists(CheckFlag);
+        if (check)
+        {
+            try { File.Delete(CheckFlag); } catch { }
+            var checkFailures = await CheckAsync(renewals);
+            if (checkFailures > 0) { AcmeService.SaveRenewals(renewals); return 1; }
         }
 
         var failures = 0;
@@ -106,6 +121,46 @@ public static class RenewalRunner
 
         AcmeService.SaveRenewals(renewals);
         return failures == 0 ? 0 : 1;
+    }
+
+    /// <summary>Proves this account can do a renewal, without renewing: Exchange rights, the certificate, Cloudflare.</summary>
+    private static async Task<int> CheckAsync(List<AcmeRenewal> renewals)
+    {
+        var who = WindowsIdentity.GetCurrent().Name;
+        Log.Info($"Checking what renewal needs, as {who}");
+        var failures = 0;
+        foreach (var def in renewals.Where(d => d.Challenge != AcmeChallengeType.Dns01Manual))
+        {
+            try
+            {
+                using var session = await ExchangeSession.ConnectAsync(def.ConnectServer, credential: null);
+                var certs = new CertificateService(session);
+                var found = await certs.GetCertificatesAsync(def.ConnectServer);
+                var current = def.LastThumbprint is null ? null : found.FirstOrDefault(c => c.Thumbprint.Equals(def.LastThumbprint, StringComparison.OrdinalIgnoreCase));
+                Log.Info($"{def.DomainsText}: connected to {def.ConnectServer} and read {found.Count} certificate(s)" +
+                         (current is null ? "" : $"; the current one ({def.LastThumbprint![..8]}…) is there"));
+
+                var cloudflare = "";
+                if (def.Challenge == AcmeChallengeType.Dns01Cloudflare)
+                {
+                    var zones = await CloudflareDns.FromSavedToken().VerifyAsync();
+                    cloudflare = $", Cloudflare token works ({string.Join(", ", zones)})";
+                    Log.Info($"{def.DomainsText}: the Cloudflare token works and can edit {string.Join(", ", zones)}");
+                }
+
+                def.LastRun = DateTime.Now;
+                def.LastResult = $"Check passed {DateTime.Now:g} as {who}: Exchange OK{cloudflare}";
+                Log.Success($"{def.DomainsText}: everything renewal needs works as {who}");
+            }
+            catch (Exception ex)
+            {
+                failures++;
+                def.LastRun = DateTime.Now;
+                def.LastResult = $"Check failed as {who}: {ex.Message}";
+                Log.Error($"{def.DomainsText}: check failed as {who}: {ex.Message}");
+            }
+        }
+        return failures;
     }
 }
 
@@ -231,6 +286,8 @@ public static class RenewalTask
     /// <summary>Starts the task now (as its own account), to prove it works.</summary>
     public static void RunNow()
     {
+        // Ask that run to check everything (Exchange, Cloudflare) as the task's account, not just what's due
+        try { File.WriteAllText(RenewalRunner.CheckFlag, DateTime.Now.ToString("s")); } catch { }
         dynamic task = Folder().GetTask(TaskName);
         task.Run(null);
         Log.Info($"Started '{TaskName}'. Its log lines go to {Log.LogDirectory}.");
