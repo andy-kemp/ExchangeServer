@@ -33,9 +33,15 @@
         <!-- Menu bar: the same layout, icons and wording as Win11 Image Prep, with only what this app needs -->
         <Menu Grid.Row="0">
             <MenuItem Header="_File">
-                <MenuItem Header="Open _Log Folder" Command="{Binding OpenLogFolderCommand}" ToolTip="Open C:\ExchangeCertManager\Logs">
+                <MenuItem Header="Open _Log Folder" Command="{Binding OpenLogFolderCommand}" ToolTip="Open C:\ProgramData\ExchangeCertManager\Logs">
                     <MenuItem.Icon>
                         <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource AkcCopper}"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Install on this Server..." Command="{Binding InstallCommand}" ToolTip="Copy to Program Files and add a Start menu shortcut; the renewal task runs the installed copy"
+                          Visibility="{Binding CanInstall, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <MenuItem.Icon>
+                        <TextBlock Text="&#xE896;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource AkcCopper}"/>
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>

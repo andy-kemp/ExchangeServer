@@ -94,10 +94,45 @@ public abstract partial class PageViewModel : ObservableObject
     {
         var certs = State.Certs!;
         var hosts = await certs.GetClientHostnamesAsync(server);
-        foreach (var d in await certs.GetAcceptedDomainsAsync())
-            hosts.Add($"autodiscover.{d.ToLowerInvariant()}");
+
+        // autodiscover.<domain> for the default accepted domain and the domains the URLs actually use. Other
+        // accepted domains (often the AD domain, such as ad.contoso.com) don't get one unless something points there.
+        var accepted = await certs.GetAcceptedDomainsAsync();
+        var configured = hosts.ToList();
+        for (var i = 0; i < accepted.Count; i++)
+        {
+            var d = accepted[i].ToLowerInvariant();
+            if (i == 0 || configured.Any(h => h.EndsWith("." + d, StringComparison.OrdinalIgnoreCase)))
+                hosts.Add($"autodiscover.{d}");
+        }
+
+        // A misspelt name in the Exchange configuration is suggested as the right one, with a warning
+        foreach (var h in hosts.ToList())
+        {
+            var first = h.Split('.')[0];
+            if (!first.Equals("autodiscover", StringComparison.OrdinalIgnoreCase) && Distance(first.ToLowerInvariant(), "autodiscover") <= 2)
+            {
+                var fixedName = "autodiscover" + h[first.Length..];
+                hosts.Remove(h);
+                hosts.Add(fixedName);
+                Log.Warn($"{h} looks like a typo for {fixedName}. It's in the Exchange configuration on {server}: fix it on the Virtual directories page (the Autodiscover SCP or a URL), or clients will look for the wrong name.");
+            }
+        }
+
         Log.Info($"Suggested names from {server}: {string.Join(", ", hosts)}");
         return hosts.ToList();
+    }
+
+    /// <summary>Levenshtein distance, for spotting typos in well-known names.</summary>
+    private static int Distance(string a, string b)
+    {
+        var d = new int[a.Length + 1, b.Length + 1];
+        for (var i = 0; i <= a.Length; i++) d[i, 0] = i;
+        for (var j = 0; j <= b.Length; j++) d[0, j] = j;
+        for (var i = 1; i <= a.Length; i++)
+            for (var j = 1; j <= b.Length; j++)
+                d[i, j] = Math.Min(Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1));
+        return d[a.Length, b.Length];
     }
 
     protected static string PickCommonName(IReadOnlyList<string> names) =>

@@ -102,6 +102,29 @@ public sealed partial class MainViewModel : ObservableObject
 
     // ---- Menu -------------------------------------------------------------------------------------------------
 
+    public bool CanInstall => !InstallService.IsRunningInstalledCopy;
+
+    [RelayCommand]
+    private void Install()
+    {
+        if (State.IsDemo) { AppState.Inform("Nothing is installed in demo mode."); return; }
+        if (!AppState.Confirm($"Install Exchange Certificate Manager for everyone on this server?\n\nThe EXE is copied to {AppPaths.InstallDirectory} and a Start menu shortcut is added. Its data stays in {AppPaths.ProgramData}, and the renewal task runs the installed copy.")) return;
+        try
+        {
+            InstallService.Install();
+            if (AppState.Confirm("Installed. Open the installed copy now and close this one?"))
+            {
+                InstallService.StartInstalledCopy();
+                System.Windows.Application.Current.Shutdown();
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Install failed: {ex.Message}");
+            AppState.Inform($"Couldn't install: {ex.Message}");
+        }
+    }
+
     [RelayCommand]
     private void Exit() => System.Windows.Application.Current.MainWindow?.Close();
 

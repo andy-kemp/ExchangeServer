@@ -134,7 +134,14 @@ public sealed partial class AcmeViewModel : PageViewModel
     /// <summary>Run the task as a group Managed Service Account: no password, Windows gets it from AD.</summary>
     [ObservableProperty] private bool _useGmsa;
     public bool UsePassword { get => !UseGmsa; set => UseGmsa = !value; }
-    partial void OnUseGmsaChanged(bool value) => OnPropertyChanged(nameof(UsePassword));
+    partial void OnUseGmsaChanged(bool value)
+    {
+        OnPropertyChanged(nameof(UsePassword));
+        // Suggest the usual gMSA name (15 characters at most, the AD limit) instead of the signed-in user
+        if (value && !TaskUser.TrimEnd().EndsWith('$')) TaskUser = $"{Environment.UserDomainName}\\{DefaultGmsaName}$";
+    }
+
+    public const string DefaultGmsaName = "gMSA_ExchCert";
 
     [RelayCommand]
     private void RunTaskNow()
@@ -257,23 +264,50 @@ public sealed partial class AcmeViewModel : PageViewModel
             AppState.Inform("Enter the account's password. It needs the Exchange certificate role and local admin on this machine. Or use a gMSA, which has no password to enter.");
             return;
         }
-        if (UseGmsa && !AppState.Confirm(
-                $"Register the task to run as the gMSA {TaskUser.Trim().TrimEnd('$')}$?\n\nBefore it can run, the gMSA needs:\n" +
-                $"• this server allowed to retrieve its password (PrincipalsAllowedToRetrieveManagedPassword), and Install-ADServiceAccount run here\n" +
-                $"• local Administrators on this server (and on the other Exchange servers for HTTP validation, which writes to their web roots)\n" +
-                $"• membership of an Exchange role group with the Exchange Server Certificates and View-Only Configuration roles\n\n" +
-                "Use 'Run now' afterwards to check it works."))
-            return;
+        // A gMSA is looked up in AD first: a wrong or over-long name otherwise fails inside Task Scheduler
+        // with an unhelpful "(19,8):UserId:" error.
+        var user = TaskUser.Trim();
+        if (UseGmsa)
+        {
+            try
+            {
+                var resolved = RenewalTask.ResolveGmsa(user);
+                if (!resolved.Equals(user.EndsWith('$') ? user : user + "$", StringComparison.OrdinalIgnoreCase))
+                    Log.Info($"gMSA {user} is {resolved} in AD");
+                user = resolved;
+                TaskUser = resolved;
+            }
+            catch (Exception ex)
+            {
+                AppState.Inform(ex.Message);
+                return;
+            }
+            if (!AppState.Confirm(
+                    $"Register the task to run as the gMSA {user}?\n\nBefore it can run, the gMSA needs:\n" +
+                    "• this server allowed to retrieve its password (PrincipalsAllowedToRetrieveManagedPassword), and Install-ADServiceAccount run here\n" +
+                    "• local Administrators on this server (and on the other Exchange servers for HTTP validation, which writes to their web roots)\n" +
+                    "• membership of an Exchange role group with the Exchange Server Certificates and View-Only Configuration roles\n\n" +
+                    "Use 'Run task now' afterwards to check it works."))
+                return;
+        }
 
-        var exe = Environment.ProcessPath ?? "";
-        var downloads = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        if (exe.StartsWith(downloads, StringComparison.OrdinalIgnoreCase) &&
-            !AppState.Confirm($"The task will run the app from {exe}. If you move or delete it, renewals stop. Copy it somewhere permanent (for example C:\\ExchangeCertManager) first?\n\nRegister anyway?"))
-            return;
+        // The task should run the installed copy, not wherever this EXE was downloaded to
+        string exe;
+        if (InstallService.IsRunningInstalledCopy) exe = Environment.ProcessPath!;
+        else
+        {
+            var answer = MessageBox.Show(Application.Current.MainWindow!,
+                $"The renewal task should run a copy that won't be moved or deleted.\n\nInstall this version to {AppPaths.InstallDirectory} (with a Start menu shortcut) and run the task from there? Recommended.\n\n" +
+                $"Yes: install and use the installed copy\nNo: run it from {Environment.ProcessPath}\nCancel: don't register",
+                "Exchange Certificate Manager", MessageBoxButton.YesNoCancel, MessageBoxImage.Question);
+            if (answer == MessageBoxResult.Cancel) return;
+            try { exe = answer == MessageBoxResult.Yes ? InstallService.Install() : Environment.ProcessPath!; }
+            catch (Exception ex) { AppState.Inform($"Couldn't install: {ex.Message}"); return; }
+        }
 
         try
         {
-            RenewalTask.Register(TaskUser.Trim(), UseGmsa ? null : CertificateService.ToSecure(TaskPassword));
+            RenewalTask.Register(user, UseGmsa ? null : CertificateService.ToSecure(TaskPassword), exe);
             ReloadRenewals();
         }
         catch (Exception ex)

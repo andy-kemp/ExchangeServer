@@ -234,19 +234,7 @@ public sealed class AcmeService
     }
 
     /// <summary>ProgramData\ExchangeCertManager readable only by Administrators and SYSTEM.</summary>
-    public static void EnsureSecureDirectory(string path)
-    {
-        var dir = new DirectoryInfo(path);
-        if (dir.Exists) return;
-        var security = new DirectorySecurity();
-        security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
-        foreach (var sid in new[] { WellKnownSidType.BuiltinAdministratorsSid, WellKnownSidType.LocalSystemSid })
-        {
-            security.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier(sid, null), FileSystemRights.FullControl,
-                InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit, PropagationFlags.None, AccessControlType.Allow));
-        }
-        dir.Create(security);
-    }
+    public static void EnsureSecureDirectory(string path) => AppPaths.EnsureSecureDirectory(path);
 
     // ---------------------------------------------------------------- saved renewals
 
