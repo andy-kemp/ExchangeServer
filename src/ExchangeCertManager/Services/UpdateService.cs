@@ -75,7 +75,7 @@ public static class UpdateService
     }
 
     /// <summary>Downloads the new version, checks it, and swaps it in. Returns the path to start.</summary>
-    public static async Task<string> DownloadAndInstallAsync(UpdateInfo info, IProgress<string>? progress = null, CancellationToken ct = default)
+    public static async Task<string> DownloadAndInstallAsync(UpdateInfo info, IProgress<(string Text, double? Percent)>? progress = null, CancellationToken ct = default)
     {
         var exe = ExePath ?? throw new InvalidOperationException("This copy can't update itself. Download the new version from downloads.andykemp.com.");
         if (!IsSha256(info.Sha256))
@@ -87,16 +87,34 @@ public static class UpdateService
         var incoming = exe + ".new";
         var old = exe + ".old";
 
-        progress?.Report($"Downloading version {info.Version}…");
+        progress?.Report(($"Downloading version {info.Version}…", 0));
         Log.Info($"Update: downloading {url}");
         try
         {
             using (var resp = await Http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct))
             {
                 resp.EnsureSuccessStatusCode();
+                var total = resp.Content.Headers.ContentLength;
                 await using var src = await resp.Content.ReadAsStreamAsync(ct);
                 await using var dst = new FileStream(incoming, FileMode.Create, FileAccess.Write, FileShare.None);
-                await src.CopyToAsync(dst, ct);
+                var buffer = new byte[81920];
+                long done = 0;
+                var lastPercent = -1;
+                int read;
+                while ((read = await src.ReadAsync(buffer, ct)) > 0)
+                {
+                    await dst.WriteAsync(buffer.AsMemory(0, read), ct);
+                    done += read;
+                    if (total is > 0)
+                    {
+                        var percent = (int)(done * 100 / total.Value);
+                        if (percent != lastPercent)
+                        {
+                            lastPercent = percent;
+                            progress?.Report(($"Downloading version {info.Version}… {done / 1048576.0:0.0} of {total.Value / 1048576.0:0.0} MB", percent));
+                        }
+                    }
+                }
             }
         }
         catch (UnauthorizedAccessException)
@@ -104,7 +122,7 @@ public static class UpdateService
             throw new UnauthorizedAccessException($"Can't write to {dir}. Copy the app to a folder you can write to, such as C:\\ExchangeCertManager, and run it from there.");
         }
 
-        progress?.Report("Checking the download…");
+        progress?.Report(("Checking the SHA-256…", null));
         string actual;
         await using (var f = File.OpenRead(incoming))
             actual = Convert.ToHexString(await SHA256.HashDataAsync(f, ct)).ToLowerInvariant();
@@ -115,7 +133,7 @@ public static class UpdateService
         }
         Log.Info($"Update: SHA-256 matches ({actual})");
 
-        progress?.Report("Installing…");
+        progress?.Report(("Installing…", null));
         TryDelete(old);
         File.Move(exe, old);               // a running EXE can be renamed
         try { File.Move(incoming, exe); }

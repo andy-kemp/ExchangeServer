@@ -175,15 +175,28 @@ public sealed partial class MainViewModel : ObservableObject
             UpdateService.OpenUrl(UpdateService.DownloadsPage);
             return;
         }
+        // The update runs in the splash, as WinImagePrep's updater: "Updating", from and to versions, progress
+        var from = UpdateService.CurrentText;
+        var window = new SplashWindow { Owner = System.Windows.Application.Current.MainWindow };
+        window.ShowUpdate(from, info.Version);
+        window.Show();
         string exe;
         State.IsBusy = true;
+        State.BusyText = $"Updating to version {info.Version}…";
         try
         {
-            State.BusyText = $"Updating to version {info.Version}…";
-            exe = await UpdateService.DownloadAndInstallAsync(info, new Progress<string>(m => State.BusyText = m));
+            exe = await UpdateService.DownloadAndInstallAsync(info, new Progress<(string Text, double? Percent)>(p =>
+            {
+                window.SetStatus(p.Text);
+                window.SetProgress(p.Percent);
+            }));
+            window.SetStatus($"Updated to {info.Version}. Restarting…");
+            window.SetProgress(100);
+            await Task.Delay(1200);
         }
         catch (Exception ex)
         {
+            window.Close();
             Log.Error($"Update failed: {ex.Message}");
             AppState.Inform($"The update didn't install: {ex.Message}\n\nNothing was changed. You can download it from downloads.andykemp.com.");
             return;
