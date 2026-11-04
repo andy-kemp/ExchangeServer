@@ -88,6 +88,14 @@ public partial class App : Application
         main.Activate();
         splash.Close();
 
+        if (!demo && main.DataContext is MainViewModel live)
+        {
+            // Tidy up after an update, then (if enabled in Tools > Options) look for a newer version.
+            // Both run in the background and never block or interrupt.
+            _ = UpdateService.CleanUpAsync();
+            if (live.State.Settings.CheckForUpdatesAtStartup) _ = live.CheckForUpdatesAsync(quiet: true);
+        }
+
         if (demo && main.DataContext is MainViewModel vm)
         {
             DemoMode.Seed(vm);
