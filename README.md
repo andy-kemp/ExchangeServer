@@ -40,11 +40,11 @@ Everything is logged to the panel at the bottom and to `C:\ProgramData\ExchangeC
 
 No .NET install is needed; the EXE is self-contained.
 
-## Download and run
+## Download and install
 
-Download [`ExchangeCertManager.exe`](https://downloads.andykemp.com/exchange-cert-manager/latest/ExchangeCertManager.exe) ([SHA-256](https://downloads.andykemp.com/exchange-cert-manager/latest/SHA256SUMS.txt)) and run it. **File > Install on this Server** copies it to Program Files with a Start menu shortcut; the renewal task runs that copy. It asks for elevation because it writes ACME challenge files to IIS and can register the renewal task.
+Install [`ExchangeCertManager.msi`](https://downloads.andykemp.com/exchange-cert-manager/latest/ExchangeCertManager.msi) ([SHA-256](https://downloads.andykemp.com/exchange-cert-manager/latest/SHA256SUMS.txt)). It goes in Program Files with a Start menu shortcut, and the renewal task runs that copy. For Intune or other tools: `msiexec /i ExchangeCertManager.msi /qn`, adding `UPDATES=0` to leave updates to your deployment tool. Otherwise **Tools > Check for updates** updates the app from downloads.andykemp.com, checked against its SHA-256. It asks for elevation because it writes ACME challenge files to IIS and can register the renewal task.
 
-For several machines or Intune, use [`ExchangeCertManager.msi`](https://downloads.andykemp.com/exchange-cert-manager/latest/ExchangeCertManager.msi) (`msiexec /i ExchangeCertManager.msi /qn`; add `UPDATES=0` to leave updates to your deployment tool). Otherwise **Tools > Check for updates** updates the app from downloads.andykemp.com, checked against its SHA-256. See [Installing and deploying](https://docs.andykemp.com/exchange-cert-manager/install/).
+The standalone [`ExchangeCertManager.exe`](https://downloads.andykemp.com/#exchange-cert-manager) is on the downloads page for anyone who'd rather not install it; it's also what the in-app updater downloads. See [Installing and deploying](https://docs.andykemp.com/exchange-cert-manager/install/).
 
 ## Build
 
