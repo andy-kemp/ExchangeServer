@@ -39,7 +39,7 @@
 
         <StackPanel Margin="28,18,28,8">
             <TextBlock Style="{StaticResource AkcBody}" FontWeight="SemiBold"
-                       Text="Request, renew, deploy and health-check Exchange Server certificates and URLs, including Let's Encrypt with automatic renewal."/>
+                       Text="Certificates, URLs and domains for Exchange Server: request, renew, deploy and health-check certificates (including Let's Encrypt with automatic renewal), set every URL, and manage accepted domains and address policy."/>
 
             <TextBlock Text="Developed by" Style="{StaticResource AkcSubheading}"/>
             <TextBlock Style="{StaticResource AkcBody}" Text="Andy Kemp Consulting Ltd"/>

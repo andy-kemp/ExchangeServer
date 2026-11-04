@@ -13,7 +13,8 @@ public partial class AboutWindow : Window
         InitializeComponent();
         txtVersion.Text = $"Version {UpdateService.CurrentText}";
         txtFolder.Text = AppPaths.ProgramData;
-        txtInstalled.Text = InstallService.IsRunningInstalledCopy
+        var demo = Environment.GetCommandLineArgs().Any(a => a is "--demo" or "--screenshots");
+        txtInstalled.Text = InstallService.IsRunningInstalledCopy || demo
             ? $"Installed in {AppPaths.InstallDirectory}."
             : $"Running from {Environment.ProcessPath}. File > Install on this Server puts a copy in Program Files.";
     }
