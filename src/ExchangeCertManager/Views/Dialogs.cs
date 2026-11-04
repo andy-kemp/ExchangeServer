@@ -230,43 +230,6 @@ public static class UpdateDialog
     }
 }
 
-public static class AboutDialog
-{
-    public static void Show()
-    {
-        var w = DialogKit.NewWindow("About Exchange Certificate Manager", 460);
-        var root = new StackPanel { Margin = new Thickness(22) };
-        root.Children.Add(new Image
-        {
-            Source = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/akc-logo.png")),
-            Height = 38, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 14),
-        });
-        root.Children.Add(DialogKit.Text("Exchange Certificate Manager", bold: true, size: 16));
-        var ver = DialogKit.Text($"Version {ExchangeCertManager.Services.UpdateService.CurrentText}", bold: true, size: 12.5);
-        ver.Foreground = (Brush)Application.Current.FindResource("AkcOk");
-        root.Children.Add(ver);
-        root.Children.Add(DialogKit.Text("Request, renew, deploy and health-check Exchange Server certificates and URLs, including Let's Encrypt with automatic renewal. For Exchange 2016, 2019 and Subscription Edition."));
-        root.Children.Add(DialogKit.Text("© Andy Kemp Consulting Ltd. MIT licence.", size: 12));
-        foreach (var (text, url) in new[]
-                 {
-                     ("www.andykemp.com", "https://www.andykemp.com/"),
-                     ("Documentation", "https://docs.andykemp.com/exchange-cert-manager/"),
-                     ("Downloads", ExchangeCertManager.Services.UpdateService.DownloadsPage),
-                 })
-        {
-            var t = new TextBlock { Margin = new Thickness(0, 0, 0, 4) };
-            var h = new System.Windows.Documents.Hyperlink(new System.Windows.Documents.Run(text));
-            h.Click += (_, _) => ExchangeCertManager.Services.UpdateService.OpenUrl(url);
-            t.Inlines.Add(h);
-            root.Children.Add(t);
-        }
-        var close = new Button { Content = "Close", IsDefault = true, IsCancel = true, MinWidth = 90, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
-        root.Children.Add(close);
-        w.Content = root;
-        w.ShowDialog();
-    }
-}
-
 public static class CreateGmsaDialog
 {
     /// <returns>The options, or null if cancelled.</returns>

@@ -12,9 +12,9 @@
     <ApplicationIcon>app.ico</ApplicationIcon>
     <AssemblyName>ExchangeCertManager</AssemblyName>
     <RootNamespace>ExchangeCertManager</RootNamespace>
-    <Version>1.7.0</Version>
-    <AssemblyVersion>1.7.0.0</AssemblyVersion>
-    <FileVersion>1.7.0.0</FileVersion>
+    <Version>1.7.1</Version>
+    <AssemblyVersion>1.7.1.0</AssemblyVersion>
+    <FileVersion>1.7.1.0</FileVersion>
     <Authors>Andy Kemp Consulting Ltd</Authors>
     <Company>Andy Kemp Consulting Ltd</Company>
     <Product>Exchange Certificate Manager</Product>
@@ -51,6 +51,7 @@
     <Resource Include="Assets\akc-logo-header.png" />
     <Resource Include="Assets\ak-monogram.png" />
     <Resource Include="Assets\atlas.png" />
+    <Resource Include="Assets\app-icon.png" />
   </ItemGroup>
 
 </Project>

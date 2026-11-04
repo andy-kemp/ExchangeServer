@@ -153,7 +153,7 @@ public sealed partial class MainViewModel : ObservableObject
     private void ReportIssue() => UpdateService.OpenUrl("https://www.andykemp.com/contact/");
 
     [RelayCommand]
-    private void ShowAbout() => AboutDialog.Show();
+    private void ShowAbout() => new AboutWindow { Owner = System.Windows.Application.Current.MainWindow }.ShowDialog();
 
     [RelayCommand]
     private Task CheckForUpdates() => CheckForUpdatesAsync(quiet: false);

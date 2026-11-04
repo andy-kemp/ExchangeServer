@@ -1,0 +1,71 @@
+<Window x:Class="ExchangeCertManager.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About Exchange Certificate Manager"
+        Width="560" SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        Background="{StaticResource AkcBg}"
+        Icon="pack://application:,,,/app.ico">
+    <!-- The same layout as AKC AppDeploy's About: a black-and-copper band like the splash, then the details -->
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="#090909" Padding="28,22">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <Image Source="pack://application:,,,/Assets/akc-logo-header.png" Height="36" HorizontalAlignment="Left"
+                           RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,0,14"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Image Source="pack://application:,,,/Assets/app-icon.png" Height="32" Margin="0,0,10,0"
+                               RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
+                        <TextBlock Text="Exchange Certificate Manager" Foreground="White" FontSize="22" FontWeight="Bold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock x:Name="txtVersion" Text="Version" Foreground="#7FBF63" FontSize="13.5" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                </StackPanel>
+                <Image Grid.Column="1" Source="pack://application:,,,/Assets/atlas.png" Height="120"
+                       RenderOptions.BitmapScalingMode="HighQuality" Margin="12,-8,0,-22"/>
+            </Grid>
+        </Border>
+
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="22,4,22,18">
+            <Button Content="Website" Click="Website_Click" Margin="0,0,8,0"/>
+            <Button Content="Documentation" Click="Docs_Click" Margin="0,0,8,0"/>
+            <Button Content="Close" Style="{StaticResource PrimaryButton}" IsDefault="True" IsCancel="True" Click="Close_Click"/>
+        </StackPanel>
+
+        <StackPanel Margin="28,18,28,8">
+            <TextBlock Style="{StaticResource AkcBody}" FontWeight="SemiBold"
+                       Text="Request, renew, deploy and health-check Exchange Server certificates and URLs, including Let's Encrypt with automatic renewal."/>
+
+            <TextBlock Text="Developed by" Style="{StaticResource AkcSubheading}"/>
+            <TextBlock Style="{StaticResource AkcBody}" Text="Andy Kemp Consulting Ltd"/>
+
+            <TextBlock Text="Links" Style="{StaticResource AkcSubheading}"/>
+            <TextBlock Style="{StaticResource AkcBody}">
+                <Hyperlink NavigateUri="https://www.andykemp.com" RequestNavigate="Link_RequestNavigate" Foreground="{StaticResource AkcCopper}">www.andykemp.com</Hyperlink>
+                <LineBreak/>
+                <Hyperlink NavigateUri="https://docs.andykemp.com/exchange-cert-manager/" RequestNavigate="Link_RequestNavigate" Foreground="{StaticResource AkcCopper}">docs.andykemp.com/exchange-cert-manager</Hyperlink>
+                <LineBreak/>
+                <Hyperlink NavigateUri="https://downloads.andykemp.com/#exchange-cert-manager" RequestNavigate="Link_RequestNavigate" Foreground="{StaticResource AkcCopper}">downloads.andykemp.com</Hyperlink>
+            </TextBlock>
+
+            <TextBlock Text="Your files" Style="{StaticResource AkcSubheading}"/>
+            <TextBlock Style="{StaticResource AkcMutedText}" Text="Logs, the Let's Encrypt account key, saved renewals and the Cloudflare token are kept here, readable only by Administrators and SYSTEM. Passwords and tokens never go in a log."/>
+            <Border Style="{StaticResource AkcPathBox}" Margin="0,6,0,0">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Open" Margin="8,0,0,0" Padding="10,3" Click="OpenFolder_Click"/>
+                    <TextBlock x:Name="txtFolder" FontFamily="{StaticResource AkcMono}" FontSize="11.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                </DockPanel>
+            </Border>
+            <TextBlock x:Name="txtInstalled" Style="{StaticResource AkcMutedText}" Margin="0,6,0,0"/>
+
+            <TextBlock Style="{StaticResource AkcMutedText}" Margin="0,18,0,0" TextAlignment="Center">
+                © 2026 Andy Kemp Consulting Ltd. MIT licence. Microsoft Exchange is a trademark of Microsoft.<LineBreak/>Exchange Certificate Manager is not affiliated with Microsoft.
+            </TextBlock>
+        </StackPanel>
+    </DockPanel>
+</Window>
