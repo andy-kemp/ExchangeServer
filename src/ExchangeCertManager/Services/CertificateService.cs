@@ -1,4 +1,5 @@
 using System.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using ExchangeCertManager.Helpers;
 using ExchangeCertManager.Models;
@@ -236,8 +237,7 @@ public sealed class CertificateService
     {
         var p = new Dictionary<string, object?> { ["Server"] = server, ["FileData"] = fileData };
         var result = await _session.InvokeAsync("Import-ExchangeCertificate", p);
-        var thumb = result.Select(o => o.Str("Thumbprint")).FirstOrDefault(t => t.Length > 0)
-                    ?? throw new InvalidOperationException("Import succeeded but no thumbprint came back.");
+        var thumb = await ResolveImportedAsync(server, result, () => LeafOf(Load(c => c.Import(fileData))));
         Log.Success($"Request completed on {server}: {thumb}");
         return thumb;
     }
@@ -288,11 +288,47 @@ public sealed class CertificateService
         };
         if (!string.IsNullOrWhiteSpace(friendlyName)) p["FriendlyName"] = friendlyName;
         var result = await _session.InvokeAsync("Import-ExchangeCertificate", p);
-        var thumb = result.Select(o => o.Str("Thumbprint")).FirstOrDefault(t => t.Length > 0)
-                    ?? throw new InvalidOperationException("Import succeeded but no thumbprint came back.");
+        var plain = new System.Net.NetworkCredential(string.Empty, password).Password;
+        var thumb = await ResolveImportedAsync(server, result, () =>
+        {
+            var certs = Load(c => c.Import(pfx, plain, X509KeyStorageFlags.EphemeralKeySet));
+            return certs.FirstOrDefault(c => c.HasPrivateKey) ?? LeafOf(certs);
+        });
         Log.Success($"Imported {thumb} on {server}");
         return thumb;
     }
+
+    /// <summary>
+    /// The thumbprint of what was just imported. Import-ExchangeCertificate doesn't always return the certificate
+    /// over remote PowerShell (it can come back empty when the file includes the chain), so if it doesn't, the
+    /// thumbprint is read from the file itself and checked with Get-ExchangeCertificate on the server.
+    /// </summary>
+    private async Task<string> ResolveImportedAsync(string server, IReadOnlyCollection<System.Management.Automation.PSObject> result, Func<X509Certificate2?> fromFile)
+    {
+        var returned = result.Select(o => o.Str("Thumbprint")).FirstOrDefault(t => t.Length == 40);
+        if (returned is not null) return returned;
+
+        var leaf = fromFile() ?? throw new InvalidOperationException("Exchange didn't say what it imported, and the certificate couldn't be read from the file.");
+        var thumb = leaf.Thumbprint;
+        var check = await _session.InvokeAsync("Get-ExchangeCertificate",
+            new Dictionary<string, object?> { ["Server"] = server, ["Thumbprint"] = thumb }, quiet: true);
+        if (!check.Any())
+            throw new InvalidOperationException($"Exchange reported no error, but {thumb} ({leaf.Subject}) isn't on {server}.");
+        Log.Info($"Exchange didn't return the imported certificate; found it on {server} by its thumbprint");
+        return thumb;
+    }
+
+    private static X509Certificate2Collection Load(Action<X509Certificate2Collection> import)
+    {
+        var c = new X509Certificate2Collection();
+        try { import(c); } catch { }
+        return c;
+    }
+
+    /// <summary>The end-entity certificate: the one that isn't a CA.</summary>
+    private static X509Certificate2? LeafOf(X509Certificate2Collection certs) =>
+        certs.FirstOrDefault(c => c.Extensions.OfType<X509BasicConstraintsExtension>().All(b => !b.CertificateAuthority))
+        ?? certs.FirstOrDefault();
 
     public async Task RemoveAsync(string server, string thumbprint)
     {
