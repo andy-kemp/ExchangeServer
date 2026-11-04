@@ -109,17 +109,25 @@ public static class RenewalRunner
     }
 }
 
+/// <summary>What the registered task looks like now.</summary>
+public sealed record RenewalTaskInfo(string UserId, bool IsGmsa, DateTime? LastRun, int LastResult, DateTime? NextRun, string State);
+
 /// <summary>
 /// Registers the daily renewal task through the Task Scheduler COM API, so the account password
-/// never appears on a command line.
+/// never appears on a command line. The task can run as a normal service account (with its password) or as a
+/// group Managed Service Account (gMSA, name ending in $), where Windows fetches the password from AD itself.
+/// Registering again replaces the task, which is how an existing task moves to a gMSA.
 /// </summary>
 public static class RenewalTask
 {
     public const string TaskName = "Exchange Certificate Manager - Let's Encrypt renewal";
 
-    public static void Register(string userName, SecureString password)
+    /// <param name="password">The account's password, or null for a gMSA.</param>
+    public static void Register(string userName, SecureString? password)
     {
         var exe = Environment.ProcessPath ?? throw new InvalidOperationException("Can't find the app's own path.");
+        var gmsa = password is null;
+        if (gmsa && !userName.EndsWith('$')) userName += "$";
         var start = DateTime.Today.AddDays(1).AddHours(3).AddMinutes(17).ToString("s");
         var xml = $"""
             <?xml version="1.0" encoding="UTF-16"?>
@@ -158,32 +166,66 @@ public static class RenewalTask
             </Task>
             """;
 
-        var type = Type.GetTypeFromProgID("Schedule.Service") ?? throw new InvalidOperationException("Task Scheduler isn't available.");
-        dynamic scheduler = Activator.CreateInstance(type)!;
-        scheduler.Connect();
-        dynamic folder = scheduler.GetFolder("\\");
+        dynamic folder = Folder();
         const int TASK_CREATE_OR_UPDATE = 6;
         const int TASK_LOGON_PASSWORD = 1;
-        var plain = new System.Net.NetworkCredential(string.Empty, password).Password;
+        // For a gMSA the password is left empty: Task Scheduler gets it from AD when the task runs
+        // (the same as Register-ScheduledTask with -LogonType Password and no password).
+        var plain = password is null ? null : new System.Net.NetworkCredential(string.Empty, password).Password;
         folder.RegisterTask(TaskName, xml, TASK_CREATE_OR_UPDATE, userName, plain, TASK_LOGON_PASSWORD, null);
-        Log.Success($"Scheduled task '{TaskName}' registered to run daily as {userName}");
+        Log.Success($"Scheduled task '{TaskName}' registered to run daily as {userName}{(gmsa ? " (gMSA)" : "")}");
     }
 
-    public static bool Exists()
+    public static bool Exists() => Info() is not null;
+
+    /// <summary>The registered task's account and last result, or null if there isn't one.</summary>
+    public static RenewalTaskInfo? Info()
     {
         try
         {
-            var type = Type.GetTypeFromProgID("Schedule.Service");
-            if (type is null) return false;
-            dynamic scheduler = Activator.CreateInstance(type)!;
-            scheduler.Connect();
-            dynamic folder = scheduler.GetFolder("\\");
-            folder.GetTask(TaskName);
-            return true;
+            dynamic task = Folder().GetTask(TaskName);
+            string user = task.Definition.Principal.UserId ?? "";
+            DateTime last = task.LastRunTime;
+            DateTime next = task.NextRunTime;
+            int result = task.LastTaskResult;
+            int state = task.State;
+            static DateTime? Real(DateTime d) => d.Year < 2000 ? null : d;
+            var stateText = state switch { 1 => "Disabled", 2 => "Queued", 3 => "Ready", 4 => "Running", _ => "Unknown" };
+            return new RenewalTaskInfo(user, user.EndsWith('$'), Real(last), result, Real(next), stateText);
         }
         catch
         {
-            return false;
+            return null;
         }
+    }
+
+    /// <summary>Starts the task now (as its own account), to prove it works.</summary>
+    public static void RunNow()
+    {
+        dynamic task = Folder().GetTask(TaskName);
+        task.Run(null);
+        Log.Info($"Started '{TaskName}'. Its log lines go to {Log.LogDirectory}.");
+    }
+
+    /// <summary>Plain-English meaning of the common Task Scheduler results.</summary>
+    public static string ResultText(int code) => unchecked((uint)code) switch
+    {
+        0 => "succeeded",
+        1 => "finished with errors (see the log)",
+        0x41300 => "ready",
+        0x41301 => "running",
+        0x41303 => "hasn't run yet",
+        0x8007052E => "couldn't log on: for a gMSA, check this server is allowed to retrieve its password and it has 'Log on as a batch job'",
+        0x80070569 => "the account isn't allowed to log on as a batch job here",
+        0x800710E0 => "was refused by the operator or administrator",
+        _ => $"returned 0x{code:X8}",
+    };
+
+    private static dynamic Folder()
+    {
+        var type = Type.GetTypeFromProgID("Schedule.Service") ?? throw new InvalidOperationException("Task Scheduler isn't available.");
+        dynamic scheduler = Activator.CreateInstance(type)!;
+        scheduler.Connect();
+        return scheduler.GetFolder("\\");
     }
 }
