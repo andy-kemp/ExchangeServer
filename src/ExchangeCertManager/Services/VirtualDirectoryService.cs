@@ -56,6 +56,8 @@ public sealed class VirtualDirectoryService
                     {
                         Server = server.Name, Kind = OutlookAnywhere, Label = "Outlook Anywhere (hostnames)", Identity = o.Str("Identity"),
                         Internal = o.Str("InternalHostname"), External = o.Str("ExternalHostname"),
+                        InternalAuth = o.Str("InternalClientAuthenticationMethod"),
+                        ExternalAuth = o.Str("ExternalClientAuthenticationMethod"),
                     });
             }
             catch (Exception ex) { Log.Warn($"Get-OutlookAnywhere on {server.Name}: {ex.Message}"); }
@@ -74,6 +76,10 @@ public sealed class VirtualDirectoryService
         }
         return list;
     }
+
+    /// <summary>The current Outlook Anywhere authentication method, or Exchange's default when there isn't one.</summary>
+    static string AuthOrDefault(string current, string fallback) =>
+        string.IsNullOrWhiteSpace(current) || current.Equals("Misconfigured", StringComparison.OrdinalIgnoreCase) ? fallback : current;
 
     /// <summary>Works out the commands needed to move every ticked entry to the namespace. Unchanged entries are skipped.</summary>
     public static List<VdirChange> Plan(IEnumerable<VdirEntry> current, NamespacePlan plan)
@@ -101,12 +107,17 @@ public sealed class VirtualDirectoryService
                 {
                     p["InternalHostname"] = plan.InternalHost;
                     p["InternalClientsRequireSsl"] = true;
+                    // Exchange insists on an authentication method when a hostname is first set; keep the current one
+                    p["InternalClientAuthenticationMethod"] = AuthOrDefault(e.InternalAuth, "Ntlm");
                     before.Add($"internal {Show(e.Internal)}"); after.Add($"internal {plan.InternalHost}");
                 }
                 if (plan.SetExternal && !SameHost(e.External, plan.ExternalHost))
                 {
                     p["ExternalHostname"] = plan.ExternalHost;
                     p["ExternalClientsRequireSsl"] = true;
+                    // Without this, setting an external hostname for the first time fails with "you must also specify
+                    // the DefaultAuthenticationMethod or ExternalClientAuthenticationMethod parameter"
+                    p["ExternalClientAuthenticationMethod"] = AuthOrDefault(e.ExternalAuth, "Negotiate");
                     before.Add($"external {Show(e.External)}"); after.Add($"external {plan.ExternalHost}");
                 }
                 if (p.Count > 1) changes.Add(new VdirChange(e, "Set-OutlookAnywhere", p, string.Join("; ", before), string.Join("; ", after)));
