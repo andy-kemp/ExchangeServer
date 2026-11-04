@@ -175,6 +175,7 @@ public static class DemoMode
             ("inventory", "02-certificates.png", () => main.Inventory.Selected = AppState.Current.Inventory.FirstOrDefault()),
             ("health", "03-health.png", null),
             ("urls", "09-virtual-directories.png", null),
+            ("urls", "10-virtual-directories-preview.png", () => (window.FindName("PageScroll") as System.Windows.Controls.ScrollViewer)?.ScrollToBottom()),
             ("request", "04-request.png", null),
             ("complete", "05-complete.png", null),
             ("import", "06-import.png", () =>
@@ -202,6 +203,7 @@ public static class DemoMode
         foreach (var (key, file, prepare) in pages)
         {
             main.Navigate(key);
+            (window.FindName("PageScroll") as System.Windows.Controls.ScrollViewer)?.ScrollToTop();
             main.ShowLog = key == "inventory"; // the log panel once is enough; more of each page otherwise
             prepare?.Invoke();
             await Settle(window);

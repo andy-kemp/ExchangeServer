@@ -11,7 +11,7 @@
         <DataGrid ItemsSource="{Binding Entries}" MaxHeight="300">
             <DataGrid.Columns>
                 <DataGridTextColumn Header="SERVER" Binding="{Binding Server}" Width="90"/>
-                <DataGridTextColumn Header="SERVICE" Binding="{Binding Label}" Width="200"/>
+                <DataGridTextColumn Header="SERVICE" Binding="{Binding Label}" Width="230"/>
                 <DataGridTextColumn Header="INTERNAL" Binding="{Binding InternalText}" Width="*"/>
                 <DataGridTextColumn Header="EXTERNAL" Binding="{Binding ExternalText}" Width="*"/>
             </DataGrid.Columns>
@@ -87,7 +87,7 @@
                 <DataGrid ItemsSource="{Binding Changes}" MaxHeight="260">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="SERVER" Binding="{Binding Entry.Server}" Width="90"/>
-                        <DataGridTextColumn Header="SERVICE" Binding="{Binding Entry.Label}" Width="170"/>
+                        <DataGridTextColumn Header="SERVICE" Binding="{Binding Entry.Label}" Width="230"/>
                         <DataGridTextColumn Header="NOW" Binding="{Binding Before}" Width="*"/>
                         <DataGridTextColumn Header="BECOMES" Binding="{Binding After}" Width="*"/>
                     </DataGrid.Columns>

@@ -80,7 +80,7 @@
             </Border>
 
             <!-- Page -->
-            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer x:Name="PageScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="26,20,26,20">
                     <TextBlock Style="{StaticResource PageTitle}" Text="{Binding CurrentPage.Title}"/>
                     <TextBlock Style="{StaticResource PageSubtitle}" Text="{Binding CurrentPage.Subtitle}"/>
