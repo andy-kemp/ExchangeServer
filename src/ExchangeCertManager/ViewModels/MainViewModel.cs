@@ -19,6 +19,7 @@ public sealed partial class MainViewModel : ObservableObject
         Deploy = new DeployViewModel(this);
         Acme = new AcmeViewModel(this);
         Health = new HealthViewModel(this);
+        Urls = new UrlsViewModel(this);
         _currentPage = Connect;
         State.PropertyChanged += (_, e) =>
         {
@@ -40,6 +41,7 @@ public sealed partial class MainViewModel : ObservableObject
     public DeployViewModel Deploy { get; }
     public AcmeViewModel Acme { get; }
     public HealthViewModel Health { get; }
+    public UrlsViewModel Urls { get; }
 
     [ObservableProperty] private PageViewModel _currentPage;
     [ObservableProperty] private bool _showLog = true;
@@ -53,11 +55,12 @@ public sealed partial class MainViewModel : ObservableObject
     public bool IsDeployPage { get => CurrentPage == Deploy; set { if (value) Navigate("deploy"); } }
     public bool IsAcmePage { get => CurrentPage == Acme; set { if (value) Navigate("acme"); } }
     public bool IsHealthPage { get => CurrentPage == Health; set { if (value) Navigate("health"); } }
+    public bool IsUrlsPage { get => CurrentPage == Urls; set { if (value) Navigate("urls"); } }
 
     partial void OnCurrentPageChanged(PageViewModel value)
     {
         foreach (var name in new[] { nameof(IsConnectPage), nameof(IsInventoryPage), nameof(IsRequestPage), nameof(IsCompletePage), nameof(IsImportPage),
-                                     nameof(IsDeployPage), nameof(IsAcmePage), nameof(IsHealthPage) })
+                                     nameof(IsDeployPage), nameof(IsAcmePage), nameof(IsHealthPage), nameof(IsUrlsPage) })
             OnPropertyChanged(name);
         value.OnShown();
     }
@@ -73,6 +76,7 @@ public sealed partial class MainViewModel : ObservableObject
             "deploy" => Deploy,
             "acme" => Acme,
             "health" => Health,
+            "urls" => Urls,
             _ => Connect,
         };
     }

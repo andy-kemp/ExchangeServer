@@ -75,10 +75,12 @@ public sealed class HealthService
     private async Task CheckAuthCertificateAsync(List<CertificateGroup> groups, IReadOnlyList<ExchangeServerInfo> servers, List<HealthItem> items)
     {
         var (current, next, nextEffective) = await _certs.GetAuthConfigAsync();
+        var previous = await _certs.GetPreviousAuthThumbprintAsync();
         if (string.IsNullOrEmpty(current))
         {
             items.Add(new(HealthSeverity.Warning, "Auth certificate", "", "No Exchange Auth certificate is configured",
-                "Hybrid, OWA/ECP sign-in and OAuth depend on it. Create one with New-ExchangeCertificate -KeySize 2048 -SubjectName \"cn=Microsoft Exchange Server Auth Certificate\" -DomainName @() -Services SMTP, then Set-AuthConfig."));
+                "Hybrid, OWA/ECP sign-in and OAuth depend on it. Create one now: it's made on one server, copied to the others and set as the Auth certificate.")
+                { Fix = new HealthFix(HealthFixKind.RenewAuthCertificate, "Create it…") });
             return;
         }
 
@@ -86,7 +88,8 @@ public sealed class HealthService
         if (group is null)
         {
             items.Add(new(HealthSeverity.Error, "Auth certificate", "", "The Auth certificate isn't installed on any server",
-                $"Get-AuthConfig points at {current}, which none of the checked servers have."));
+                $"Get-AuthConfig points at {current}, which none of the checked servers have. Create a new one to replace it.")
+                { Fix = new HealthFix(HealthFixKind.RenewAuthCertificate, "Create a new one…") });
             return;
         }
 
@@ -95,18 +98,26 @@ public sealed class HealthService
             .ToList();
         if (missing.Count > 0)
             items.Add(new(HealthSeverity.Error, "Auth certificate", string.Join(", ", missing), "Auth certificate missing on some servers",
-                "Every Mailbox server needs the Auth certificate. Use Deploy to copy it across (no services needed)."));
+                "Every Mailbox server needs the Auth certificate. Copy it across (no services are assigned).")
+                { Fix = new HealthFix(HealthFixKind.DeployAuthCertificate, "Copy to servers…") { Thumbprint = group.Thumbprint, Servers = missing } });
 
         var days = group.DaysLeft ?? 999;
         var nextNote = next is null ? "No next certificate is staged." : $"Next certificate {next} is staged{(nextEffective is { } d ? $" for {d:d}" : "")}.";
+        var staged = next is not null;
+        var renew = staged ? null : new HealthFix(HealthFixKind.RenewAuthCertificate, "Renew…");
         if (days < 0)
             items.Add(new(HealthSeverity.Error, "Auth certificate", "", "The Exchange Auth certificate has expired",
-                $"Hybrid free/busy, OWA sign-in and OAuth will fail. Renew it with the Exchange Auth certificate renewal steps (MRA script or Set-AuthConfig), then run the Hybrid Configuration Wizard. {nextNote}"));
+                $"Hybrid free/busy, OWA sign-in and OAuth will fail until it's replaced. Renew it now, then run the Hybrid Configuration Wizard if you're hybrid. {nextNote}") { Fix = renew });
         else if (days < 60)
             items.Add(new(HealthSeverity.Warning, "Auth certificate", "", $"The Exchange Auth certificate expires in {days} days",
-                $"Renew before it expires and re-run the Hybrid Configuration Wizard if you're hybrid. {nextNote}"));
+                $"Renew it before it expires; staged renewal takes 49 hours to go live. Re-run the Hybrid Configuration Wizard afterwards if you're hybrid. {nextNote}") { Fix = renew });
         else
             items.Add(new(HealthSeverity.Ok, "Auth certificate", "", $"Exchange Auth certificate valid for {days} days", nextNote));
+
+        if (!string.IsNullOrEmpty(previous) && next is null)
+            items.Add(new(HealthSeverity.Info, "Auth certificate", "", "The previous Auth certificate is still listed",
+                $"Get-AuthConfig still references the previous certificate {previous}. Once the new one has been active for a while, clear it.")
+                { Fix = new HealthFix(HealthFixKind.ClearPreviousAuthCertificate, "Clear previous…") });
     }
 
     private async Task CheckHostnameCoverageAsync(ExchangeServerInfo server, List<CertificateGroup> groups, List<HealthItem> items)
@@ -142,7 +153,7 @@ public sealed class HealthService
             {
                 var tls = c.Str("TlsCertificateName");
                 if (tls.Length == 0) continue;
-                CheckPinnedCertificate($"Receive connector '{c.Str("Name")}'", server.Name, tls,
+                CheckPinnedCertificate("Receive", c.Str("Name"), c.Str("Identity"), new[] { server.Name }, tls,
                     groups.Where(g => g.Installs.Any(i => i.Server.Equals(server.Name, StringComparison.OrdinalIgnoreCase))).ToList(), items);
             }
         }
@@ -160,7 +171,8 @@ public sealed class HealthService
             {
                 var tls = c.Str("TlsCertificateName");
                 if (tls.Length == 0) continue;
-                CheckPinnedCertificate($"Send connector '{c.Str("Name")}'", c.Str("SourceTransportServers"), tls, groups, items);
+                var sources = c.List("SourceTransportServers");
+                CheckPinnedCertificate("Send", c.Str("Name"), c.Str("Identity") is { Length: > 0 } id ? id : c.Str("Name"), sources, tls, groups, items);
             }
         }
         catch (Exception ex)
@@ -173,8 +185,15 @@ public sealed class HealthService
     /// TlsCertificateName is "&lt;I&gt;issuer&lt;S&gt;subject". After a renewal with a different issuer
     /// or subject the connector silently stops matching, which breaks hybrid mail flow.
     /// </summary>
-    private static void CheckPinnedCertificate(string what, string server, string tls, List<CertificateGroup> candidates, List<HealthItem> items)
+    private static void CheckPinnedCertificate(string type, string name, string identity, IReadOnlyList<string> servers, string tls,
+        List<CertificateGroup> candidates, List<HealthItem> items)
     {
+        var what = $"{type} connector '{name}'";
+        var server = string.Join(", ", servers);
+        var fix = new HealthFix(HealthFixKind.UpdateConnectorCertificate, "Update connector…")
+        {
+            ConnectorType = type, ConnectorIdentity = identity, ConnectorName = name, OldTlsName = tls, Servers = servers,
+        };
         var (issuer, subject) = ParseTlsName(tls);
         var matches = candidates.Where(g => !g.IsPending &&
                                             Normalise(g.Issuer) == Normalise(issuer) &&
@@ -182,14 +201,23 @@ public sealed class HealthService
         if (matches.Count == 0)
         {
             items.Add(new(HealthSeverity.Error, "Mail flow", server, $"{what} points at a certificate that isn't installed",
-                $"TlsCertificateName is {tls}. Update it with Set-ReceiveConnector/Set-SendConnector -TlsCertificateName \"<I>issuer<S>subject\" for the new certificate. Hybrid connectors are the usual culprit."));
+                $"TlsCertificateName is {tls}. Point it at the current certificate. Hybrid connectors are the usual culprit.") { Fix = fix });
             return;
         }
 
         var best = matches.OrderByDescending(m => m.NotAfter).First();
         if (best.DaysLeft is < 30)
+        {
+            // If a newer certificate is already installed (a renewal with a different issuer), offer to switch to it.
+            var replacement = FixService.PickConnectorCertificate(candidates, fix);
+            var canSwitch = replacement is not null && !replacement.Thumbprint.Equals(best.Thumbprint, StringComparison.OrdinalIgnoreCase)
+                            && replacement.NotAfter > best.NotAfter;
             items.Add(new(HealthSeverity.Warning, "Mail flow", server, $"{what} uses a certificate expiring in {best.DaysLeft} days",
-                "When you renew, keep the same issuer and subject, or update TlsCertificateName straight after."));
+                canSwitch
+                    ? $"{replacement!.CommonName}, valid to {replacement.NotAfter:d}, is already installed. Point the connector at it."
+                    : "When you renew, keep the same issuer and subject, or update TlsCertificateName straight after.")
+                { Fix = canSwitch ? fix : null });
+        }
     }
 
     private static (string Issuer, string Subject) ParseTlsName(string tls)

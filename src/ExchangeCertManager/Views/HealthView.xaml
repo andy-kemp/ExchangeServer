@@ -27,6 +27,9 @@
                             <StackPanel Grid.Column="2" Margin="12,0,0,0" HorizontalAlignment="Right">
                                 <TextBlock Text="{Binding Area}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource AkcCopper}" HorizontalAlignment="Right"/>
                                 <TextBlock Text="{Binding Server}" FontSize="11" Foreground="{StaticResource AkcMuted}" HorizontalAlignment="Right" TextWrapping="Wrap" MaxWidth="220"/>
+                                <Button Style="{StaticResource PrimaryButton}" Content="{Binding Fix.Label}" Margin="0,8,0,0" Padding="12,5" HorizontalAlignment="Right"
+                                        Command="{Binding DataContext.FixCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
+                                        Visibility="{Binding HasFix, Converter={StaticResource BoolToVisibilityConverter}}"/>
                             </StackPanel>
                         </Grid>
                     </Border>

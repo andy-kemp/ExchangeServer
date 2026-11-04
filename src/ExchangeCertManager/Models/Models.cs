@@ -131,6 +131,8 @@ public enum HealthSeverity { Ok, Info, Warning, Error }
 public sealed record HealthItem(HealthSeverity Severity, string Area, string Server, string Title, string Detail)
 {
     public string SeverityText => Severity.ToString();
+    public HealthFix? Fix { get; init; }
+    public bool HasFix => Fix is not null;
 }
 
 public enum AcmeChallengeType { Http01, Dns01Manual }
@@ -154,4 +156,50 @@ public sealed class AcmeRenewal
 
     public string DomainsText => string.Join(", ", Domains);
     public string ServersText => string.Join(", ", Servers);
+}
+
+public sealed record VdirKind(string Key, string Label, string GetCommand, string SetCommand, string Path);
+
+/// <summary>One virtual directory (or Outlook Anywhere / the Autodiscover SCP) on one server.</summary>
+public sealed class VdirEntry
+{
+    public required string Server { get; init; }
+    public required string Kind { get; init; }
+    public required string Label { get; init; }
+    public required string Identity { get; init; }
+    public string Internal { get; init; } = "";
+    public string External { get; init; } = "";
+
+    public string InternalText => string.IsNullOrWhiteSpace(Internal) ? "(none)" : Internal;
+    public string ExternalText => Kind == "Autodiscover" ? "n/a" : string.IsNullOrWhiteSpace(External) ? "(none)" : External;
+}
+
+public sealed class NamespacePlan
+{
+    public string InternalHost { get; init; } = "";
+    public string ExternalHost { get; init; } = "";
+    public string AutodiscoverHost { get; init; } = "";
+    public bool SetInternal { get; init; } = true;
+    public bool SetExternal { get; init; } = true;
+    public bool EcpExternalBlank { get; init; }
+    public IReadOnlyCollection<string> Servers { get; init; } = Array.Empty<string>();
+    public IReadOnlyCollection<string> Kinds { get; init; } = Array.Empty<string>();
+}
+
+public sealed record VdirChange(VdirEntry Entry, string Command, Dictionary<string, object?> Parameters, string Before, string After)
+{
+    public string CommandText => Services.ExchangeSession.Describe(Command, Parameters);
+}
+
+public enum HealthFixKind { RenewAuthCertificate, ClearPreviousAuthCertificate, DeployAuthCertificate, UpdateConnectorCertificate }
+
+/// <summary>A one-click fix offered on a health check result.</summary>
+public sealed record HealthFix(HealthFixKind Kind, string Label)
+{
+    public string? ConnectorType { get; init; }      // "Send" or "Receive"
+    public string? ConnectorIdentity { get; init; }
+    public string? ConnectorName { get; init; }
+    public string? OldTlsName { get; init; }
+    public IReadOnlyList<string> Servers { get; init; } = Array.Empty<string>();
+    public string? Thumbprint { get; init; }
 }

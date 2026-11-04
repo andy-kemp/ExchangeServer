@@ -19,6 +19,18 @@ public sealed partial class AppState : ObservableObject
 
     public CertificateService? Certs { get; private set; }
     public HealthService? Health { get; private set; }
+    public VirtualDirectoryService? Vdirs { get; private set; }
+    public FixService? Fixes { get; private set; }
+
+    public bool IsDemo => DemoConnection is not null && Session is null;
+
+    /// <summary>False (with a message) in demo mode, where there's no Exchange to change.</summary>
+    public bool RequireLive()
+    {
+        if (!IsDemo) return true;
+        Inform("This is demo mode with made-up data, so nothing can be changed. Connect to Exchange to use it.");
+        return false;
+    }
 
     public ObservableCollection<ExchangeServerInfo> Servers { get; } = new();
     public ObservableCollection<CertificateGroup> Inventory { get; } = new();
@@ -46,6 +58,8 @@ public sealed partial class AppState : ObservableObject
     {
         Certs = value is null ? null : new CertificateService(value);
         Health = value is null || Certs is null ? null : new HealthService(value, Certs);
+        Vdirs = value is null ? null : new VirtualDirectoryService(value);
+        Fixes = value is null || Certs is null ? null : new FixService(value, Certs);
         OnPropertyChanged(nameof(IsConnected));
         OnPropertyChanged(nameof(ConnectionText));
     }
@@ -67,7 +81,7 @@ public sealed partial class AppState : ObservableObject
     /// <summary>Runs work with the busy overlay, logging and showing any error.</summary>
     public async Task<bool> RunAsync(string busyText, Func<Task> work)
     {
-        if (IsBusy) return false;
+        if (IsBusy || !RequireLive()) return false;
         IsBusy = true;
         BusyText = busyText;
         try

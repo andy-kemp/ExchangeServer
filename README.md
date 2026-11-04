@@ -14,16 +14,17 @@ Docs: [docs.andykemp.com/exchange-cert-manager](https://docs.andykemp.com/exchan
 |---|---|
 | **Connect** | Kerberos sign-in as your current Windows account (or another account). Detects when it's running on an Exchange server and pre-fills it. Works from a domain-joined admin machine too. |
 | **Certificates** | Every certificate across every Exchange server, grouped by thumbprint: names, issuer, expiry, which servers hold it and which services each has. Assign services, renew, export PFX, deploy or remove. |
-| **Health check** | Expiring certificates in use, the **Exchange Auth (OAuth) certificate**, whether the IIS certificate's SANs cover every URL configured on the virtual directories / Outlook Anywhere / Autodiscover, connectors whose `TlsCertificateName` points at a certificate that's gone (the classic hybrid break), servers missing a certificate the others have, and clean-up candidates. |
+| **Health check** | Expiring certificates in use, the **Exchange Auth (OAuth) certificate**, whether the IIS certificate's SANs cover every URL configured on the virtual directories / Outlook Anywhere / Autodiscover, connectors whose `TlsCertificateName` points at a certificate that's gone (the classic hybrid break), servers missing a certificate the others have, and clean-up candidates. One-click fixes: renew the Auth certificate (staged 49 hours, as Microsoft recommends), clear the previous one, and update a connector's `TlsCertificateName`. |
+| **Virtual directories** | Every internal and external URL on every server (OWA, ECP, EWS, ActiveSync, OAB, MAPI, Outlook Anywhere, Autodiscover SCP). Set one namespace with a command preview and a certificate coverage check. The PowerShell vdir is never touched. |
 | **New / renew request** | Creates the key on the server and gives you the CSR. "Suggest from Exchange URLs" fills the names in from your configuration. Renew from the Certificates page keeps the same names. |
 | **Complete request** | Imports the CA's response on the server with the pending request, assigns services and copies it to the other servers in one step. |
 | **Import PFX** | Install a certificate you already have as a .pfx. Checks the file locally first (names, expiry, private key, password) then imports and assigns it on the servers you pick. |
 | **Deploy to servers** | Exports once, imports on every server that doesn't have it, assigns the same services everywhere. Shows a summary before it does anything. |
 | **Let's Encrypt** | HTTP-01 (writes the challenge to every server's Default Web Site, so it works behind a load balancer) or manual DNS-01 for wildcards. Installs and assigns the certificate, and registers a daily scheduled task that renews within 30 days of expiry. |
 
-| Health check | Let's Encrypt |
+| Health check | Virtual directories |
 |---|---|
-| ![Health check](docs/screenshots/health.webp) | ![Let's Encrypt](docs/screenshots/lets-encrypt.webp) |
+| ![Health check](docs/screenshots/health.webp) | ![Virtual directories](docs/screenshots/virtual-directories.webp) |
 
 Everything is logged to the panel at the bottom and to `C:\ExchangeCertManager\Logs`.
 

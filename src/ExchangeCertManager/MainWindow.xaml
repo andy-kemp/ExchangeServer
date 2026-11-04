@@ -18,6 +18,7 @@
         <DataTemplate DataType="{x:Type vm:DeployViewModel}"><v:DeployView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:AcmeViewModel}"><v:AcmeView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:HealthViewModel}"><v:HealthView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:UrlsViewModel}"><v:UrlsView/></DataTemplate>
     </Window.Resources>
 
     <Grid Background="{StaticResource AkcBg}">
@@ -67,6 +68,7 @@
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Connect" IsChecked="{Binding IsConnectPage, Mode=TwoWay}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Certificates" IsChecked="{Binding IsInventoryPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Health check" IsChecked="{Binding IsHealthPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
+                        <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Virtual directories" IsChecked="{Binding IsUrlsPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <TextBlock Text="TASKS" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource AkcMuted}" Margin="12,16,0,4"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="New / renew request" IsChecked="{Binding IsRequestPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Complete request" IsChecked="{Binding IsCompletePage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
@@ -78,7 +80,7 @@
             </Border>
 
             <!-- Page -->
-            <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer x:Name="PageScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <StackPanel Margin="26,20,26,20">
                     <TextBlock Style="{StaticResource PageTitle}" Text="{Binding CurrentPage.Title}"/>
                     <TextBlock Style="{StaticResource PageSubtitle}" Text="{Binding CurrentPage.Subtitle}"/>

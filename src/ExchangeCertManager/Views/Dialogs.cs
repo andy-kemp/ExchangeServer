@@ -134,3 +134,36 @@ public static class DnsRecordsWindow
         grid.Children.Add(l); grid.Children.Add(box); grid.Children.Add(copy);
     }
 }
+
+public static class AuthRenewDialog
+{
+    /// <returns>The server to create it on and whether to make it active now, or null if cancelled.</returns>
+    public static (string Server, bool Immediate)? Show(IReadOnlyList<string> servers, bool currentBroken, string? title = null)
+    {
+        var w = DialogKit.NewWindow(title ?? "Renew the Exchange Auth certificate", 560);
+        var root = new StackPanel { Margin = new Thickness(20) };
+        root.Children.Add(DialogKit.Text(title ?? "Renew the Exchange Auth certificate", bold: true, size: 15));
+        root.Children.Add(DialogKit.Text("A new self-signed Auth certificate is created on one server, copied to the others, and set as the Auth certificate. No services are assigned to it, and your SMTP certificate isn't touched."));
+
+        root.Children.Add(DialogKit.Text("Create it on", bold: true, size: 12.5));
+        var pick = new ComboBox { ItemsSource = servers, SelectedIndex = 0, Margin = new Thickness(0, 0, 0, 12) };
+        root.Children.Add(pick);
+
+        root.Children.Add(DialogKit.Text("When it takes over", bold: true, size: 12.5));
+        var staged = new RadioButton { IsChecked = !currentBroken, Margin = new Thickness(0, 0, 0, 6) };
+        staged.Content = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = "In 49 hours (recommended). Microsoft's guidance: gives every server time to get it. It switches over on its own; nothing else to do." };
+        var now = new RadioButton { IsChecked = currentBroken, Margin = new Thickness(0, 0, 0, 6) };
+        now.Content = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = "Now. For when the current one has expired or is missing. It's published straight away, the previous one is cleared and the OWA and ECP app pools are recycled (users may need to sign in to OWA again)." };
+        root.Children.Add(staged);
+        root.Children.Add(now);
+
+        var note = DialogKit.Text("If you're hybrid, run the Hybrid Configuration Wizard again once the new certificate is active.", size: 12);
+        note.Foreground = (Brush)Application.Current.FindResource("AkcMuted");
+        root.Children.Add(note);
+
+        root.Children.Add(DialogKit.Buttons(w, "Renew"));
+        w.Content = root;
+        if (w.ShowDialog() != true) return null;
+        return ((string)pick.SelectedItem, now.IsChecked == true);
+    }
+}
