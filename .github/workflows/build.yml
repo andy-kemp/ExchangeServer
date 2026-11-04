@@ -48,7 +48,7 @@ jobs:
           path: publish/ExchangeCertManager.exe
           if-no-files-found: error
 
-  # Publishes main builds to downloads.andykemp.com (R2 bucket akc-downloads) when the version in the project
+  # Publishes main builds to downloads.andykemp.com (R2 bucket akc-download) when the version in the project
   # file is new: exchange-cert-manager/<version>/ and exchange-cert-manager/latest/. A version is never overwritten,
   # so bump <Version> in ExchangeCertManager.csproj to release. Needs CLOUDFLARE_API_TOKEN (R2 edit) and
   # CLOUDFLARE_ACCOUNT_ID repository secrets.
@@ -74,7 +74,7 @@ jobs:
             echo "::warning::CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID not set, so nothing was published"; exit 0
           fi
           version=$(grep -oP '(?<=<Version>)[^<]+' src/ExchangeCertManager/ExchangeCertManager.csproj)
-          bucket=akc-downloads; base=exchange-cert-manager
+          bucket=akc-download; base=exchange-cert-manager
           if npx --yes wrangler@4 r2 object get "$bucket/$base/$version/SHA256SUMS.txt" --remote --pipe > /dev/null 2>&1; then
             echo "Version $version is already published; bump <Version> to release a new one."; exit 0
           fi
