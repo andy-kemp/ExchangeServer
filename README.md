@@ -1,6 +1,6 @@
 # Exchange Certificate Manager
 
-A Windows app for requesting, renewing, deploying and health-checking Exchange Server certificates, including free Let's Encrypt certificates with automatic renewal. Built by **Andy Kemp Consulting Ltd** with the same look and single-file EXE approach as WinImagePrep.
+Certificates, URLs and domains for Exchange Server, in one Windows app: request, renew, deploy and health-check certificates (including free Let's Encrypt certificates with automatic renewal), set every client URL, and manage accepted domains and email address policy. Built by **Andy Kemp Consulting Ltd** with the same look and single-file EXE approach as WinImagePrep.
 
 Supports Exchange 2016, Exchange 2019 and Exchange Server Subscription Edition (SE), including on Windows Server 2025.
 
@@ -12,7 +12,7 @@ Docs: [docs.andykemp.com/exchange-cert-manager](https://docs.andykemp.com/exchan
 
 | Page | What you get |
 |---|---|
-| **Connect** | Kerberos sign-in as your current Windows account (or another account). Detects when it's running on an Exchange server and pre-fills it. Works from a domain-joined admin machine too. |
+| **Connect** | Finds the Exchange servers in Active Directory (version and AD site, this site first). Kerberos sign-in as your current Windows account (or another account). Works from a domain-joined admin machine too. |
 | **Certificates** | Every certificate across every Exchange server, grouped by thumbprint: names, issuer, expiry, which servers hold it and which services each has. Assign services, renew, export PFX, deploy or remove. |
 | **Health check** | Expiring certificates in use, the **Exchange Auth (OAuth) certificate**, whether the IIS certificate's SANs cover every URL configured on the virtual directories / Outlook Anywhere / Autodiscover, connectors whose `TlsCertificateName` points at a certificate that's gone (the classic hybrid break), servers missing a certificate the others have, and clean-up candidates. One-click fixes: renew the Auth certificate (staged 49 hours, as Microsoft recommends), clear the previous one, and update a connector's `TlsCertificateName`. |
 | **Virtual directories** | Every internal and external URL on every server (OWA, ECP, EWS, ActiveSync, OAB, MAPI, Outlook Anywhere, Autodiscover SCP). Set one namespace with a command preview and a certificate coverage check. The PowerShell vdir is never touched. |
@@ -21,11 +21,13 @@ Docs: [docs.andykemp.com/exchange-cert-manager](https://docs.andykemp.com/exchan
 | **Complete request** | Imports the CA's response on the server with the pending request, assigns services and copies it to the other servers in one step. |
 | **Import PFX** | Install a certificate you already have as a .pfx. Checks the file locally first (names, expiry, private key, password) then imports and assigns it on the servers you pick. |
 | **Deploy to servers** | Exports once, imports on every server that doesn't have it, assigns the same services everywhere. Shows a summary before it does anything. |
-| **Let's Encrypt** | HTTP-01 (writes the challenge to every server's Default Web Site, so it works behind a load balancer) or manual DNS-01 for wildcards. Installs and assigns the certificate, and registers a daily scheduled task that renews within 30 days of expiry. |
+| **Let's Encrypt** | HTTP-01 (writes the challenge to every server's Default Web Site, so it works behind a load balancer) or DNS-01 for wildcards: automatic through Cloudflare (API token stored encrypted, admins only) or manual. Installs and assigns the certificate, and registers a nightly task that renews within 30 days of expiry, running as SYSTEM, a user or a gMSA the app can create for you. |
 
 | Health check | Virtual directories |
 |---|---|
 | ![Health check](docs/screenshots/health.webp) | ![Virtual directories](docs/screenshots/virtual-directories.webp) |
+| **Accepted domains** | **Let's Encrypt** |
+| ![Accepted domains](docs/screenshots/accepted-domains.webp) | ![Let's Encrypt](docs/screenshots/lets-encrypt.webp) |
 
 Everything is logged to the panel at the bottom and to `C:\ProgramData\ExchangeCertManager\Logs`.
 
@@ -41,6 +43,8 @@ No .NET install is needed; the EXE is self-contained.
 ## Download and run
 
 Download [`ExchangeCertManager.exe`](https://downloads.andykemp.com/exchange-cert-manager/latest/ExchangeCertManager.exe) ([SHA-256](https://downloads.andykemp.com/exchange-cert-manager/latest/SHA256SUMS.txt)) and run it. **File > Install on this Server** copies it to Program Files with a Start menu shortcut; the renewal task runs that copy. It asks for elevation because it writes ACME challenge files to IIS and can register the renewal task.
+
+For several machines or Intune, use [`ExchangeCertManager.msi`](https://downloads.andykemp.com/exchange-cert-manager/latest/ExchangeCertManager.msi) (`msiexec /i ExchangeCertManager.msi /qn`; add `UPDATES=0` to leave updates to your deployment tool). Otherwise **Tools > Check for updates** updates the app from downloads.andykemp.com, checked against its SHA-256. See [Installing and deploying](https://docs.andykemp.com/exchange-cert-manager/install/).
 
 ## Build
 
