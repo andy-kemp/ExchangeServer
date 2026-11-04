@@ -34,6 +34,23 @@ public static class UpdateService
     private const string Base = "https://downloads.andykemp.com/exchange-cert-manager";
     private const string LatestUrl = Base + "/latest/version.json";
 
+    /// <summary>Installed with the MSI (HKLM\SOFTWARE\Andy Kemp Consulting\Exchange Certificate Manager).</summary>
+    public static bool InstalledByMsi => Policy("InstalledBy") == "MSI";
+
+    /// <summary>The MSI was installed with UPDATES=0: the organisation deploys new versions, so the app doesn't update itself.</summary>
+    public static bool UpdatesManaged => Policy("Updates") == "0";
+
+    private static string? Policy(string name)
+    {
+        try
+        {
+            using var key = Microsoft.Win32.RegistryKey.OpenBaseKey(Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Registry64)
+                .OpenSubKey(@"SOFTWARE\Andy Kemp Consulting\Exchange Certificate Manager");
+            return key?.GetValue(name)?.ToString();
+        }
+        catch { return null; }
+    }
+
     public static Version Current { get; } = Assembly.GetExecutingAssembly().GetName().Version ?? new Version(0, 0, 0);
     public static string CurrentText => Current.ToString(3);
 
