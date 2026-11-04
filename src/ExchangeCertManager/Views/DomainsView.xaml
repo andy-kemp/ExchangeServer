@@ -1,0 +1,112 @@
+<UserControl x:Class="ExchangeCertManager.Views.DomainsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:ExchangeCertManager.Views">
+    <StackPanel>
+        <!-- Accepted domains -->
+        <DockPanel Margin="0,0,0,8" LastChildFill="False">
+            <TextBlock DockPanel.Dock="Left" Text="Accepted domains" FontWeight="Bold" FontSize="14.5" Foreground="{StaticResource AkcHeading}" VerticalAlignment="Center"/>
+            <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding RefreshCommand}" Margin="0"/>
+        </DockPanel>
+        <DataGrid ItemsSource="{Binding Domains}" MaxHeight="220">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="DOMAIN" Binding="{Binding DomainName}" Width="*"/>
+                <DataGridTextColumn Header="TYPE" Binding="{Binding DomainType}" Width="140"/>
+                <DataGridTextColumn Header="DEFAULT" Binding="{Binding DefaultText}" Width="90"/>
+                <DataGridTextColumn Header="NOTE" Binding="{Binding Note}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <Grid Margin="0,8,0,0" Width="640" HorizontalAlignment="Left">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox Text="{Binding NewDomain, UpdateSourceTrigger=PropertyChanged}" ToolTip="A domain to add, for example contoso.com"/>
+            <ComboBox Grid.Column="1" ItemsSource="{Binding DomainTypes}" SelectedItem="{Binding NewDomainType}" Margin="8,0,0,0"/>
+            <Button Grid.Column="2" Content="Add domain" Command="{Binding AddDomainCommand}" Margin="8,0,0,0"/>
+        </Grid>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,16"
+                   Text="Authoritative: this organisation has the mailboxes for the domain. Relay types are for domains shared with another mail system."/>
+
+        <!-- Address policies -->
+        <TextBlock Text="Email address policies" FontWeight="Bold" FontSize="14.5" Foreground="{StaticResource AkcHeading}" Margin="0,0,0,8"/>
+        <DataGrid ItemsSource="{Binding Policies}" MaxHeight="200">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="POLICY" Binding="{Binding Name}" Width="200"/>
+                <DataGridTextColumn Header="PRIORITY" Binding="{Binding Priority}" Width="90"/>
+                <DataGridTextColumn Header="PRIMARY ADDRESS" Binding="{Binding Primary}" Width="*"/>
+                <DataGridTextColumn Header="OTHER ADDRESSES" Binding="{Binding Others}" Width="*"/>
+                <DataGridTextColumn Header="APPLIES TO" Binding="{Binding AppliesTo}" Width="*"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <TextBlock Style="{StaticResource Hint}" Margin="0,6,0,14"
+                   Text="%m is the mailbox alias. A policy only ever adds addresses: taking a domain out of it doesn't remove the addresses people already have."/>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Change the default domain -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="1" Content="Change the default domain"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Everyone's primary address in"/>
+                    <ComboBox ItemsSource="{Binding DomainNames}" SelectedItem="{Binding TargetDomain}"/>
+                    <CheckBox IsChecked="{Binding KeepOldAsSecondary}" Margin="0,10,0,0">
+                        <TextBlock Text="Keep the current primary domain as a secondary address" TextWrapping="Wrap"/>
+                    </CheckBox>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Drop this domain from the policy (optional)"/>
+                    <ComboBox ItemsSource="{Binding DomainNames}" SelectedItem="{Binding DropDomain}"/>
+                    <TextBlock Style="{StaticResource Hint}" Text="Usually the AD domain, so new mailboxes stop getting an address in it."/>
+                    <CheckBox IsChecked="{Binding ApplyPolicyNow}" Margin="0,8,0,0">
+                        <TextBlock Text="Apply it now (Update-EmailAddressPolicy)" TextWrapping="Wrap"/>
+                    </CheckBox>
+                    <Button Style="{StaticResource PrimaryButton}" Content="Preview" Command="{Binding PreviewPlanCommand}" HorizontalAlignment="Left" Margin="0,14,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Retire a domain -->
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="2" Content="Retire a domain"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Domain"/>
+                    <ComboBox ItemsSource="{Binding DomainNames}" SelectedItem="{Binding RetireDomain}"/>
+                    <TextBlock Style="{StaticResource Hint}" Text="For example the AD domain (ad.contoso.com, contoso.local), once nothing needs it. It isn't used for routing mail."/>
+                    <Button Content="Check who uses it" Command="{Binding CheckUsageCommand}" HorizontalAlignment="Left" Margin="0,12,0,0"/>
+                    <StackPanel Visibility="{Binding HasUsage, Converter={x:Static v:VisibleWhen.Instance}}" Margin="0,12,0,0">
+                        <Border Style="{StaticResource Pill}" Tag="{Binding UsageState}" HorizontalAlignment="Stretch" CornerRadius="8" Padding="12,8">
+                            <TextBlock Text="{Binding UsageText}" TextWrapping="Wrap" FontWeight="Normal" FontSize="12"/>
+                        </Border>
+                        <WrapPanel Margin="0,10,0,0">
+                            <Button Content="Remove leftover addresses..." Command="{Binding RemoveAddressesCommand}" IsEnabled="{Binding CanRemoveAddresses}" Margin="0,0,8,0"/>
+                            <Button Style="{StaticResource DangerButton}" Content="Remove accepted domain..." Command="{Binding RemoveDomainCommand}" IsEnabled="{Binding CanRemoveDomain}"/>
+                        </WrapPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- The plan -->
+        <Border Style="{StaticResource Card}" Visibility="{Binding HasPlan, Converter={x:Static v:VisibleWhen.Instance}}">
+            <StackPanel>
+                <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="3" Content="Preview"/>
+                <TextBlock Text="{Binding PlanSummary}" FontWeight="SemiBold" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                <ItemsControl ItemsSource="{Binding Steps}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,0,0,8">
+                                <TextBlock Text="{Binding Text}" TextWrapping="Wrap"/>
+                                <TextBox Style="{StaticResource MonoTextBox}" Text="{Binding Command, Mode=OneWay}" BorderThickness="0" Padding="6,2" FontSize="11.5"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Button Style="{StaticResource PrimaryButton}" Content="Apply…" Command="{Binding ApplyPlanCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

@@ -207,6 +207,26 @@ public static class DemoMode
                 main.Acme.CloudflareStatus = "Token saved. It can edit: contoso.com.";
                 main.Acme.TaskStatus = "The daily renewal task is registered. It renews anything within 30 days of expiry.";
             }),
+            ("domains", "12-accepted-domains.png", () =>
+            {
+                main.DomainsPage.Load(
+                    new[]
+                    {
+                        new AcceptedDomainInfo { Name = "contoso.com", DomainName = "contoso.com", DomainType = "Authoritative", Default = true },
+                        new AcceptedDomainInfo { Name = "ad.contoso.com", DomainName = "ad.contoso.com", DomainType = "Authoritative" },
+                        new AcceptedDomainInfo { Name = "fabrikam.com", DomainName = "fabrikam.com", DomainType = "Authoritative" },
+                        new AcceptedDomainInfo { Name = "contoso.mail.onmicrosoft.com", DomainName = "contoso.mail.onmicrosoft.com", DomainType = "Authoritative" },
+                    },
+                    new[]
+                    {
+                        new AddressPolicyInfo { Name = "Fabrikam staff", Priority = "1", Templates = new() { "SMTP:%m@fabrikam.com", "smtp:%m@contoso.com" }, RecipientFilter = "Company -eq 'Fabrikam'" },
+                        new AddressPolicyInfo { Name = "Default Policy", Priority = "Lowest", Templates = new() { "SMTP:%m@ad.contoso.com", "smtp:%m@contoso.mail.onmicrosoft.com" } },
+                    });
+                main.DomainsPage.TargetDomain = "contoso.com";
+                main.DomainsPage.DropDomain = "ad.contoso.com";
+                main.DomainsPage.KeepOldAsSecondary = false;
+                main.DomainsPage.PreviewPlanCommand.Execute(null);
+            }),
             ("connect", "01-connect.png", null),
         };
 

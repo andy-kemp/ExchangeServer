@@ -19,6 +19,7 @@
         <DataTemplate DataType="{x:Type vm:AcmeViewModel}"><v:AcmeView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:HealthViewModel}"><v:HealthView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:UrlsViewModel}"><v:UrlsView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DomainsViewModel}"><v:DomainsView/></DataTemplate>
     </Window.Resources>
 
     <Grid Background="{StaticResource AkcBg}">
@@ -104,7 +105,7 @@
                 <Border DockPanel.Dock="Left" Width="1" Background="{StaticResource AkcBorder}" Margin="18,4,18,4"/>
                 <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
                     <TextBlock Text="Exchange Certificate Manager" FontSize="20" FontWeight="Bold" Foreground="{StaticResource AkcHeading}"/>
-                    <TextBlock Text="Certificates and URLs for Exchange 2016, 2019 and Subscription Edition" Foreground="{StaticResource AkcMuted}" FontSize="12.5"/>
+                    <TextBlock Text="Certificates, URLs and domains for Exchange 2016, 2019 and Subscription Edition" Foreground="{StaticResource AkcMuted}" FontSize="12.5"/>
                 </StackPanel>
                 <Border DockPanel.Dock="Right" VerticalAlignment="Center">
                     <Border.Style>
@@ -137,6 +138,7 @@
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Certificates" IsChecked="{Binding IsInventoryPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Health check" IsChecked="{Binding IsHealthPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Virtual directories" IsChecked="{Binding IsUrlsPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
+                        <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Accepted domains" IsChecked="{Binding IsDomainsPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <TextBlock Text="TASKS" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource AkcMuted}" Margin="12,16,0,4"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="New / renew request" IsChecked="{Binding IsRequestPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Complete request" IsChecked="{Binding IsCompletePage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
