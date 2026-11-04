@@ -143,10 +143,10 @@
                 </Grid>
                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0" Visibility="{Binding UseGmsa, Converter={StaticResource BoolToVisibilityConverter}}">
                     <TextBlock VerticalAlignment="Center" Text="No gMSA yet?" Margin="0,0,8,0"/>
-                    <Button Content="Create gMSA..." Command="{Binding CreateGmsaCommand}" ToolTip="Create the gMSA in AD, let this server use it, and give it the Exchange rights renewal needs"/>
+                    <Button Content="Create gMSA..." Command="{Binding CreateGmsaCommand}" ToolTip="Create the gMSA in AD, let this computer use it, and give it the Exchange rights renewal needs"/>
                 </StackPanel>
                 <TextBlock Style="{StaticResource Hint}"
-                           Text="A gMSA is best: AD manages its password, so there's nothing to store or rotate. It needs this server allowed to retrieve its password, local admin here, and an Exchange role group with the Exchange Server Certificates and View-Only Configuration roles. Registering again replaces the task, so you can move an existing task to a gMSA at any time. The task runs the installed copy (Program Files), which Register offers to set up and which updates keep current."/>
+                           Text="A gMSA is best: AD manages its password, so there's nothing to store or rotate. It needs this computer (where the task runs) allowed to retrieve its password, local admin here, and an Exchange role group with the Exchange Server Certificates and View-Only Configuration roles. Registering again replaces the task, so you can move an existing task to a gMSA at any time. The task runs the installed copy (Program Files), which Register offers to set up and which updates keep current."/>
             </StackPanel>
         </Border>
     </StackPanel>

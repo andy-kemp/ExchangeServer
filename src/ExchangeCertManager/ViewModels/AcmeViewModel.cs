@@ -305,8 +305,8 @@ public sealed partial class AcmeViewModel : PageViewModel
             }
             if (!AppState.Confirm(
                     $"Register the task to run as the gMSA {user}?\n\nBefore it can run, the gMSA needs:\n" +
-                    "• this server allowed to retrieve its password (PrincipalsAllowedToRetrieveManagedPassword), and Install-ADServiceAccount run here\n" +
-                    "• local Administrators on this server (and on the other Exchange servers for HTTP validation, which writes to their web roots)\n" +
+                    "• this computer allowed to retrieve its password (PrincipalsAllowedToRetrieveManagedPassword), and Install-ADServiceAccount run here\n" +
+                    "• local Administrators on this computer (and on the Exchange servers for HTTP validation, which writes to their web roots)\n" +
                     "• membership of an Exchange role group with the Exchange Server Certificates and View-Only Configuration roles\n\n" +
                     "Use 'Run task now' afterwards to check it works."))
                 return;

@@ -244,7 +244,7 @@ public static class RenewalTask
         0x41300 => "ready",
         0x41301 => "running",
         0x41303 => "hasn't run yet",
-        0x8007052E => "couldn't log on: for a gMSA, check this server is allowed to retrieve its password and it has 'Log on as a batch job'",
+        0x8007052E => "couldn't log on: for a gMSA, check this computer is allowed to retrieve its password and it has 'Log on as a batch job'",
         0x80070569 => "the account isn't allowed to log on as a batch job here",
         0x800710E0 => "was refused by the operator or administrator",
         _ => $"returned 0x{code:X8}",

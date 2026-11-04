@@ -7,7 +7,7 @@ namespace ExchangeCertManager.Services;
 
 public sealed record GmsaSetupOptions(
     string Name,
-    /// <summary>True: every Exchange server may use it ("Exchange Servers" group). False: only this server.</summary>
+    /// <summary>True: every Exchange server may use it ("Exchange Servers" group). False: only this computer (the one that runs the renewal task).</summary>
     bool AllExchangeServers,
     /// <summary>Lab only: create the KDS root key back-dated 10 hours so it can be used straight away.</summary>
     bool BackdateKdsRootKey,
@@ -17,7 +17,7 @@ public sealed record GmsaSetupResult(bool Ready, string Account, string Message)
 
 /// <summary>
 /// Creates (or reuses) the group Managed Service Account the renewal task runs as, and gives it what it needs:
-/// the KDS root key if the forest has none, the account itself, this server allowed to use it, installed and tested
+/// the KDS root key if the forest has none, the account itself, this computer (where the task runs) allowed to use it, installed and tested
 /// here, local Administrators, and a least-privilege Exchange role group ("Certificate renewal": Exchange Server
 /// Certificates and View-Only Configuration). AD work runs in Windows PowerShell with the ActiveDirectory module
 /// (installed if missing); the role group is created over the Exchange session. Needs rights to create accounts in
@@ -53,7 +53,7 @@ public static class GmsaSetupService
             }
         }
 
-        // 2. Everything in AD and on this server, in Windows PowerShell
+        // 2. Everything in AD and on this computer, in Windows PowerShell
         var script = BuildScript(o);
         var (exit, output) = await RunWindowsPowerShellAsync(script, progress);
         var result = output.LastOrDefault(l => l.StartsWith("RESULT ", StringComparison.Ordinal));
@@ -71,8 +71,8 @@ public static class GmsaSetupService
         var account = parts[1];
         var ok = parts.Length > 2 && parts[2].Equals("True", StringComparison.OrdinalIgnoreCase);
         return new GmsaSetupResult(ok, account, ok
-            ? $"{account} is ready: this server can use it, it's a local administrator here{(o.CreateRoleGroup ? $" and a member of the '{RoleGroupName}' role group" : "")}."
-            : $"{account} was created, but Test-ADServiceAccount says this server can't use it yet. If this server was only just allowed (through the Exchange Servers group), restart it or run 'klist -li 0x3e7 purge', then try again.");
+            ? $"{account} is ready: this computer can use it, it's a local administrator here{(o.CreateRoleGroup ? $" and a member of the '{RoleGroupName}' role group" : "")}."
+            : $"{account} was created, but Test-ADServiceAccount says this computer can't use it yet. If it was only just allowed (through the Exchange Servers group), restart it or run 'klist -li 0x3e7 purge', then try again.");
     }
 
     private static string BuildScript(GmsaSetupOptions o)
@@ -88,8 +88,18 @@ public static class GmsaSetupService
         try {
             $name = '{{o.Name}}'
             if (-not (Get-Module -ListAvailable ActiveDirectory)) {
-                'STEP Installing the Active Directory PowerShell module (RSAT-AD-PowerShell)'
-                Install-WindowsFeature RSAT-AD-PowerShell | Out-Null
+                # Windows Server: a feature. Windows 10/11 (a management workstation): an optional capability (RSAT).
+                if ((Get-CimInstance Win32_OperatingSystem).ProductType -eq 1) {
+                    'STEP Installing the RSAT Active Directory tools (Windows optional feature; this can take a few minutes)'
+                    try {
+                        Add-WindowsCapability -Online -Name 'Rsat.ActiveDirectory.DS-LDS.Tools~~~~0.0.1.0' | Out-Null
+                    } catch {
+                        throw "Couldn't install the RSAT Active Directory tools ($($_.Exception.Message)). Add 'RSAT: Active Directory Domain Services and Lightweight Directory Services Tools' in Settings > System > Optional features (WSUS-managed PCs may need it allowed from Windows Update), then try again."
+                    }
+                } else {
+                    'STEP Installing the Active Directory PowerShell module (RSAT-AD-PowerShell)'
+                    Install-WindowsFeature RSAT-AD-PowerShell | Out-Null
+                }
             }
             Import-Module ActiveDirectory -Verbose:$false
             $domain = Get-ADDomain
@@ -109,7 +119,7 @@ public static class GmsaSetupService
             $allowed = {{(o.AllExchangeServers ? "Get-ADGroup -Identity 'Exchange Servers'" : "Get-ADComputer -Identity $env:COMPUTERNAME")}}
             $gmsa = Get-ADServiceAccount -Filter "Name -eq '$name'" -Properties PrincipalsAllowedToRetrieveManagedPassword
             if ($gmsa) {
-                "STEP $name already exists; making sure this server may use it"
+                "STEP $name already exists; making sure this computer may use it"
                 $current = @($gmsa.PrincipalsAllowedToRetrieveManagedPassword)
                 if ($current -notcontains $allowed.DistinguishedName) {
                     Set-ADServiceAccount -Identity $gmsa -PrincipalsAllowedToRetrieveManagedPassword ($current + $allowed.DistinguishedName)
@@ -124,7 +134,7 @@ public static class GmsaSetupService
             $sam = $gmsa.SamAccountName
             $account = "$($domain.NetBIOSName)\$sam"
 
-            'STEP Installing it on this server'
+            'STEP Installing it on this computer'
             try { Install-ADServiceAccount -Identity $sam } catch { "STEP Install-ADServiceAccount: $($_.Exception.Message)" }
 
             'STEP Adding it to the local Administrators group'

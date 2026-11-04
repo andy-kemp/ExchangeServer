@@ -275,7 +275,7 @@ public static class CreateGmsaDialog
         var w = DialogKit.NewWindow("Create a gMSA for the renewal task", 560);
         var root = new StackPanel { Margin = new Thickness(20) };
         root.Children.Add(DialogKit.Text("Create a gMSA for the renewal task", bold: true, size: 15));
-        root.Children.Add(DialogKit.Text("A group Managed Service Account has no password for anyone to know or rotate: AD changes it and Task Scheduler fetches it. This creates one (or reuses it if it exists), lets this server use it, makes it a local administrator here, and gives it only the Exchange rights renewal needs. You need rights to create accounts in AD (for example Domain Admins) and Organization Management."));
+        root.Children.Add(DialogKit.Text("A group Managed Service Account has no password for anyone to know or rotate: AD changes it and Task Scheduler fetches it. This creates one (or reuses it if it exists), lets this computer use it (the renewal task runs here, whether that's an Exchange server or a management machine), makes it a local administrator here, and gives it only the Exchange rights renewal needs. You need rights to create accounts in AD (for example Domain Admins) and Organization Management."));
 
         root.Children.Add(DialogKit.Text("Name", bold: true, size: 12.5));
         var name = new TextBox { Text = suggestedName, Margin = new Thickness(0, 0, 0, 4) };
@@ -285,7 +285,7 @@ public static class CreateGmsaDialog
         root.Children.Add(nameHint);
 
         root.Children.Add(DialogKit.Text("Which servers can use it", bold: true, size: 12.5));
-        var thisServer = new RadioButton { IsChecked = true, Margin = new Thickness(0, 0, 0, 4), Content = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = "Only this server (works straight away)" } };
+        var thisServer = new RadioButton { IsChecked = true, Margin = new Thickness(0, 0, 0, 4), Content = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = $"Only this computer, {Environment.MachineName} (works straight away)" } };
         var allServers = new RadioButton { Margin = new Thickness(0, 0, 0, 10), Content = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = "Every Exchange server (the Exchange Servers group; a server added to it needs a restart before it can use the gMSA)" } };
         root.Children.Add(thisServer);
         root.Children.Add(allServers);
