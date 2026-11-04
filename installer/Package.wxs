@@ -1,0 +1,61 @@
+<!--
+  Exchange Certificate Manager: per-machine MSI (WiX v5). Built by .github/workflows/build.yml:
+    wix build installer/Package.wxs -arch x64 -d Version=<x.y.z> -d Publish=publish -d Src=src/ExchangeCertManager -o ExchangeCertManager.msi
+
+  Installs ExchangeCertManager.exe to C:\Program Files\Andy Kemp Consulting\Exchange Certificate Manager (the same
+  place File > Install on this Server uses, and what the renewal task runs) with a Start menu shortcut. Data in
+  C:\ProgramData\ExchangeCertManager is left alone on uninstall (renewals, ACME key, logs).
+
+  Silent install, for example from Intune:   msiexec /i ExchangeCertManager.msi /qn
+  Turn off the in-app updater (the MSI then manages versions):   msiexec /i ExchangeCertManager.msi /qn UPDATES=0
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package Name="Exchange Certificate Manager"
+           Manufacturer="Andy Kemp Consulting Ltd"
+           Version="$(var.Version)"
+           UpgradeCode="66062cc0-f768-488a-a262-6e3b65440f72"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <SummaryInformation Description="Exchange Certificate Manager $(var.Version)" Manufacturer="Andy Kemp Consulting Ltd" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Exchange Certificate Manager is already installed." AllowSameVersionUpgrades="yes" />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon" SourceFile="$(var.Src)\app.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPURLINFOABOUT" Value="https://www.andykemp.com/" />
+    <Property Id="ARPHELPLINK" Value="https://docs.andykemp.com/exchange-cert-manager/" />
+    <Property Id="ARPURLUPDATEINFO" Value="https://downloads.andykemp.com/#exchange-cert-manager" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+
+    <!-- 1: the app updates itself from downloads.andykemp.com. 0: it doesn't; deploy new MSIs instead. -->
+    <Property Id="UPDATES" Value="1" Secure="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="CompanyFolder" Name="Andy Kemp Consulting">
+        <Directory Id="INSTALLFOLDER" Name="Exchange Certificate Manager" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder" />
+
+    <Feature Id="Main" Title="Exchange Certificate Manager" Level="1">
+      <Component Id="MainExe" Directory="INSTALLFOLDER">
+        <File Id="ExchangeCertManagerExe" Source="$(var.Publish)\ExchangeCertManager.exe" KeyPath="yes" />
+      </Component>
+
+      <Component Id="Settings" Directory="INSTALLFOLDER">
+        <RegistryKey Root="HKLM" Key="SOFTWARE\Andy Kemp Consulting\Exchange Certificate Manager">
+          <RegistryValue Name="InstalledBy" Value="MSI" Type="string" KeyPath="yes" />
+          <RegistryValue Name="Updates" Value="[UPDATES]" Type="string" />
+        </RegistryKey>
+      </Component>
+
+      <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder">
+        <Shortcut Id="AppShortcut" Name="Exchange Certificate Manager" Description="Exchange certificates and URLs (Andy Kemp Consulting)"
+                  Target="[INSTALLFOLDER]ExchangeCertManager.exe" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+        <RegistryValue Root="HKLM" Key="SOFTWARE\Andy Kemp Consulting\Exchange Certificate Manager" Name="StartMenuShortcut" Value="1" Type="integer" KeyPath="yes" />
+      </Component>
+    </Feature>
+  </Package>
+</Wix>

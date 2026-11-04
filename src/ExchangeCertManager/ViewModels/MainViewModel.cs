@@ -169,6 +169,12 @@ public sealed partial class MainViewModel : ObservableObject
     public async Task CheckForUpdatesAsync(bool quiet)
     {
         if (State.IsDemo) { if (!quiet) AppState.Inform("Updates aren't checked in demo mode."); return; }
+        if (UpdateService.UpdatesManaged)
+        {
+            const string managed = "Updates are managed by your organisation: this copy was installed with the MSI and UPDATES=0, so new versions arrive the same way.";
+            if (quiet) Log.Info(managed); else AppState.Inform(managed);
+            return;
+        }
         try
         {
             var info = await UpdateService.CheckAsync();

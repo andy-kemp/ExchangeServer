@@ -12,6 +12,12 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      # Code signing with Azure Artifact Signing (formerly Trusted Signing) turns on when its secrets are set:
+      # AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET (an app registration with the
+      # "Artifact Signing Certificate Profile Signer" role), ARTIFACT_SIGNING_ENDPOINT (e.g. https://weu.codesigning.azure.net/),
+      # ARTIFACT_SIGNING_ACCOUNT and ARTIFACT_SIGNING_PROFILE. Without them, builds are unsigned.
+      SIGNING: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT != '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -42,10 +48,61 @@ jobs:
           path: screenshots/*.png
           if-no-files-found: warn
 
+      - name: Sign the EXE
+        if: env.SIGNING == 'true'
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.ARTIFACT_SIGNING_PROFILE }}
+          files-folder: publish
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Build the MSI
+        shell: pwsh
+        run: |
+          dotnet tool install --global wix --version 5.0.2
+          $version = ([xml](Get-Content src/ExchangeCertManager/ExchangeCertManager.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          New-Item -ItemType Directory -Force installer/out | Out-Null
+          wix build installer/Package.wxs -arch x64 -d Version=$version -d Publish=publish -d Src=src/ExchangeCertManager -o installer/out/ExchangeCertManager.msi
+          Get-Item installer/out/ExchangeCertManager.msi | Select-Object Name, Length
+
+      - name: Sign the MSI
+        if: env.SIGNING == 'true'
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
+          certificate-profile-name: ${{ secrets.ARTIFACT_SIGNING_PROFILE }}
+          files-folder: installer/out
+          files-folder-filter: msi
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Signature check
+        shell: pwsh
+        run: |
+          foreach ($f in 'publish/ExchangeCertManager.exe', 'installer/out/ExchangeCertManager.msi') {
+            $sig = Get-AuthenticodeSignature $f
+            "{0}: {1} {2}" -f (Split-Path $f -Leaf), $sig.Status, $sig.SignerCertificate.Subject
+          }
+
       - uses: actions/upload-artifact@v4
         with:
           name: ExchangeCertManager
-          path: publish/ExchangeCertManager.exe
+          path: |
+            publish/ExchangeCertManager.exe
+            installer/out/ExchangeCertManager.msi
           if-no-files-found: error
 
   # Publishes main builds to downloads.andykemp.com (R2 bucket akc-download) when the version in the project
@@ -82,15 +139,20 @@ jobs:
             echo "Version $version is already published; bump <Version> to release a new one."; exit 0
           fi
           cd out
-          sha256sum ExchangeCertManager.exe > SHA256SUMS.txt
-          printf '{"version":"%s","file":"ExchangeCertManager.exe","sha256":"%s","published":"%s"}\n' \
-            "$version" "$(cut -d' ' -f1 SHA256SUMS.txt)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > version.json
+          # The artifact keeps its folders (publish/, installer/out/); flatten them
+          find . -mindepth 2 \( -name '*.exe' -o -name '*.msi' \) -exec mv {} . \; ; ls -l
+          sha256sum ExchangeCertManager.exe ExchangeCertManager.msi > SHA256SUMS.txt
+          printf '{"version":"%s","file":"ExchangeCertManager.exe","sha256":"%s","installer":"ExchangeCertManager.msi","installerSha256":"%s","published":"%s"}\n' \
+            "$version" "$(grep ' ExchangeCertManager.exe$' SHA256SUMS.txt | cut -d' ' -f1)" "$(grep ' ExchangeCertManager.msi$' SHA256SUMS.txt | cut -d' ' -f1)" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > version.json
           put() { npx --yes wrangler@4 r2 object put "$bucket/$1" --file "$2" --content-type "$3" --cache-control "$4" --remote; }
           long='public, max-age=31536000, immutable'; short='public, max-age=300'
           put "$base/$version/ExchangeCertManager.exe" ExchangeCertManager.exe application/vnd.microsoft.portable-executable "$long"
           put "$base/$version/version.json" version.json application/json "$long"
+          put "$base/$version/ExchangeCertManager.msi" ExchangeCertManager.msi application/x-msi "$long"
           put "$base/latest/ExchangeCertManager.exe" ExchangeCertManager.exe application/vnd.microsoft.portable-executable "$short"
           put "$base/latest/version.json" version.json application/json "$short"
+          put "$base/latest/ExchangeCertManager.msi" ExchangeCertManager.msi application/x-msi "$short"
           put "$base/latest/SHA256SUMS.txt" SHA256SUMS.txt text/plain "$short"
           # Written last: its presence is what marks the version as published, so a failed run can simply be re-run
           put "$base/$version/SHA256SUMS.txt" SHA256SUMS.txt text/plain "$long"
