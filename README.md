@@ -26,7 +26,7 @@ Docs: [docs.andykemp.com/exchange-cert-manager](https://docs.andykemp.com/exchan
 |---|---|
 | ![Health check](docs/screenshots/health.webp) | ![Virtual directories](docs/screenshots/virtual-directories.webp) |
 
-Everything is logged to the panel at the bottom and to `C:\ExchangeCertManager\Logs`.
+Everything is logged to the panel at the bottom and to `C:\ProgramData\ExchangeCertManager\Logs`.
 
 ## Requirements
 
@@ -39,7 +39,7 @@ No .NET install is needed; the EXE is self-contained.
 
 ## Download and run
 
-Download [`ExchangeCertManager.exe`](https://downloads.andykemp.com/exchange-cert-manager/latest/ExchangeCertManager.exe) ([SHA-256](https://downloads.andykemp.com/exchange-cert-manager/latest/SHA256SUMS.txt)), copy it somewhere permanent such as `C:\ExchangeCertManager`, and run it. It asks for elevation because it writes ACME challenge files to IIS and can register the renewal task.
+Download [`ExchangeCertManager.exe`](https://downloads.andykemp.com/exchange-cert-manager/latest/ExchangeCertManager.exe) ([SHA-256](https://downloads.andykemp.com/exchange-cert-manager/latest/SHA256SUMS.txt)) and run it. **File > Install on this Server** copies it to Program Files with a Start menu shortcut; the renewal task runs that copy. It asks for elevation because it writes ACME challenge files to IIS and can register the renewal task.
 
 ## Build
 
