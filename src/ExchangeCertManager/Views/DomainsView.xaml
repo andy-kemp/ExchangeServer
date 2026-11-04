@@ -16,7 +16,7 @@
                 <DataGridTextColumn Header="NOTE" Binding="{Binding Note}" Width="*"/>
             </DataGrid.Columns>
         </DataGrid>
-        <Grid Margin="0,8,0,0" MaxWidth="640" HorizontalAlignment="Left">
+        <Grid Margin="0,8,0,0" Width="640" HorizontalAlignment="Left">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="160"/>

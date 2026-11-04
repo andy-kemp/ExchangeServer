@@ -105,7 +105,7 @@
                 <Border DockPanel.Dock="Left" Width="1" Background="{StaticResource AkcBorder}" Margin="18,4,18,4"/>
                 <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
                     <TextBlock Text="Exchange Certificate Manager" FontSize="20" FontWeight="Bold" Foreground="{StaticResource AkcHeading}"/>
-                    <TextBlock Text="Certificates and URLs for Exchange 2016, 2019 and Subscription Edition" Foreground="{StaticResource AkcMuted}" FontSize="12.5"/>
+                    <TextBlock Text="Certificates, URLs and domains for Exchange 2016, 2019 and Subscription Edition" Foreground="{StaticResource AkcMuted}" FontSize="12.5"/>
                 </StackPanel>
                 <Border DockPanel.Dock="Right" VerticalAlignment="Center">
                     <Border.Style>
