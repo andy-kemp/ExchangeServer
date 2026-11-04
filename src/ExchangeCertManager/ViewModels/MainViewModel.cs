@@ -4,6 +4,7 @@ using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using ExchangeCertManager.Services;
+using ExchangeCertManager.Views;
 
 namespace ExchangeCertManager.ViewModels;
 
@@ -31,7 +32,12 @@ public sealed partial class MainViewModel : ObservableObject
     public ObservableCollection<LogEntry> LogEntries => Log.Entries;
     public bool IsConnected => State.IsConnected;
 
-    public string VersionText => $"v{Assembly.GetExecutingAssembly().GetName().Version?.ToString(3)}";
+    public string VersionText => $"v{UpdateService.CurrentText}";
+
+    /// <summary>Set when the startup check finds a newer version; shows the update button in the status bar.</summary>
+    [ObservableProperty] private UpdateInfo? _availableUpdate;
+    public string UpdateButtonText => AvailableUpdate is null ? "" : $"Update to {AvailableUpdate.Version}";
+    partial void OnAvailableUpdateChanged(UpdateInfo? value) => OnPropertyChanged(nameof(UpdateButtonText));
 
     public ConnectViewModel Connect { get; }
     public InventoryViewModel Inventory { get; }
@@ -93,4 +99,98 @@ public sealed partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private void ToggleLog() => ShowLog = !ShowLog;
+
+    // ---- Menu -------------------------------------------------------------------------------------------------
+
+    [RelayCommand]
+    private void Exit() => System.Windows.Application.Current.MainWindow?.Close();
+
+    [RelayCommand]
+    private void OpenOptions() => OptionsDialog.Show(State.Settings, () => _ = CheckForUpdatesAsync(quiet: false));
+
+    [RelayCommand]
+    private void OpenDocs() => UpdateService.OpenUrl("https://docs.andykemp.com/exchange-cert-manager/");
+
+    [RelayCommand]
+    private void OpenQuickStart() => UpdateService.OpenUrl("https://docs.andykemp.com/exchange-cert-manager/quick-start/");
+
+    [RelayCommand]
+    private void OpenTroubleshooting() => UpdateService.OpenUrl("https://docs.andykemp.com/exchange-cert-manager/troubleshooting/");
+
+    [RelayCommand]
+    private void OpenWhatsNew() => UpdateService.OpenUrl("https://docs.andykemp.com/exchange-cert-manager/whats-new/");
+
+    [RelayCommand]
+    private void OpenDownloads() => UpdateService.OpenUrl(UpdateService.DownloadsPage);
+
+    [RelayCommand]
+    private void OpenTour() => UpdateService.OpenUrl("https://demos.andykemp.com/exchange-cert-manager/live/");
+
+    [RelayCommand]
+    private void ReportIssue() => UpdateService.OpenUrl("https://www.andykemp.com/contact/");
+
+    [RelayCommand]
+    private void ShowAbout() => AboutDialog.Show();
+
+    [RelayCommand]
+    private Task CheckForUpdates() => CheckForUpdatesAsync(quiet: false);
+
+    [RelayCommand]
+    private async Task InstallUpdate()
+    {
+        if (AvailableUpdate is { } info) await OfferUpdateAsync(info);
+    }
+
+    /// <summary>Looks for a newer version. Quiet (the startup check) only logs and shows the status-bar button;
+    /// otherwise the result is shown and an update is offered.</summary>
+    public async Task CheckForUpdatesAsync(bool quiet)
+    {
+        if (State.IsDemo) { if (!quiet) AppState.Inform("Updates aren't checked in demo mode."); return; }
+        try
+        {
+            var info = await UpdateService.CheckAsync();
+            AvailableUpdate = info;
+            if (info is null)
+            {
+                if (quiet) Log.Info($"Version {UpdateService.CurrentText} is the latest.");
+                else AppState.Inform($"You have the latest version ({UpdateService.CurrentText}).");
+                return;
+            }
+            Log.Info($"Version {info.Version} is available (you have {UpdateService.CurrentText}). Tools > Check for updates, or the button at the bottom right.");
+            if (!quiet) await OfferUpdateAsync(info);
+        }
+        catch (Exception ex)
+        {
+            if (quiet) Log.Warn($"Couldn't check for updates: {ex.Message}");
+            else AppState.Inform($"Couldn't check for updates: {ex.Message}\n\nThe latest version is always at downloads.andykemp.com.");
+        }
+    }
+
+    private async Task OfferUpdateAsync(UpdateInfo info)
+    {
+        if (State.IsBusy) { AppState.Inform("Wait for the current task to finish, then update."); return; }
+        if (!UpdateDialog.Ask(info)) return;
+        if (UpdateService.ExePath is null)
+        {
+            UpdateService.OpenUrl(UpdateService.DownloadsPage);
+            return;
+        }
+        string exe;
+        State.IsBusy = true;
+        try
+        {
+            State.BusyText = $"Updating to version {info.Version}…";
+            exe = await UpdateService.DownloadAndInstallAsync(info, new Progress<string>(m => State.BusyText = m));
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Update failed: {ex.Message}");
+            AppState.Inform($"The update didn't install: {ex.Message}\n\nNothing was changed. You can download it from downloads.andykemp.com.");
+            return;
+        }
+        finally { State.IsBusy = false; }
+
+        UpdateService.Restart(exe);
+        System.Windows.Application.Current.Shutdown();
+    }
 }

@@ -125,6 +125,8 @@ public sealed class UserSettings
     public string City { get; set; } = "";
     public string County { get; set; } = "";
     public string Country { get; set; } = "GB";
+    /// <summary>Look for a newer version on downloads.andykemp.com when the app opens (Tools > Options).</summary>
+    public bool CheckForUpdatesAtStartup { get; set; } = true;
 
     public static UserSettings Load()
     {

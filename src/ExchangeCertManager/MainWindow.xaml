@@ -24,13 +24,39 @@
     <Grid Background="{StaticResource AkcBg}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- Menu: only what this app needs, as WinImagePrep -->
+        <Menu Grid.Row="0">
+            <MenuItem Header="_File">
+                <MenuItem Header="Open _log folder" Command="{Binding OpenLogFolderCommand}" ToolTip="C:\ExchangeCertManager\Logs"/>
+                <Separator/>
+                <MenuItem Header="E_xit" Command="{Binding ExitCommand}"/>
+            </MenuItem>
+            <MenuItem Header="_Tools">
+                <MenuItem Header="_Check for updates..." Command="{Binding CheckForUpdatesCommand}" ToolTip="Look for a newer version at downloads.andykemp.com"/>
+                <MenuItem Header="_Options..." Command="{Binding OpenOptionsCommand}" ToolTip="Update settings"/>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_Documentation" Command="{Binding OpenDocsCommand}" ToolTip="docs.andykemp.com/exchange-cert-manager"/>
+                <MenuItem Header="_Quick start" Command="{Binding OpenQuickStartCommand}"/>
+                <MenuItem Header="_Troubleshooting" Command="{Binding OpenTroubleshootingCommand}"/>
+                <MenuItem Header="What's _new" Command="{Binding OpenWhatsNewCommand}" ToolTip="Release notes for each version"/>
+                <Separator/>
+                <MenuItem Header="Do_wnloads" Command="{Binding OpenDownloadsCommand}" ToolTip="downloads.andykemp.com"/>
+                <MenuItem Header="Screen _tour" Command="{Binding OpenTourCommand}" ToolTip="demos.andykemp.com"/>
+                <MenuItem Header="_Report an issue" Command="{Binding ReportIssueCommand}" ToolTip="Contact Andy Kemp Consulting"/>
+                <Separator/>
+                <MenuItem Header="_About" Command="{Binding ShowAboutCommand}"/>
+            </MenuItem>
+        </Menu>
+
         <!-- Header -->
-        <Border Grid.Row="0" Background="White" BorderBrush="{StaticResource AkcBorder}" BorderThickness="0,0,0,1" Padding="18,10">
+        <Border Grid.Row="1" Background="White" BorderBrush="{StaticResource AkcBorder}" BorderThickness="0,0,0,1" Padding="18,10">
             <DockPanel LastChildFill="False">
                 <Image DockPanel.Dock="Left" Source="pack://application:,,,/Assets/akc-logo.png" Height="30" Margin="0,0,14,0"
                        RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
@@ -54,7 +80,7 @@
             </DockPanel>
         </Border>
 
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220"/>
                 <ColumnDefinition Width="*"/>
@@ -90,7 +116,7 @@
         </Grid>
 
         <!-- Log panel -->
-        <Border Grid.Row="2" Background="{StaticResource AkcLogBg}" Height="170"
+        <Border Grid.Row="3" Background="{StaticResource AkcLogBg}" Height="170"
                 Visibility="{Binding ShowLog, Converter={StaticResource BoolToVisibilityConverter}}">
             <ListBox x:Name="LogList" ItemsSource="{Binding LogEntries}" Background="Transparent" BorderThickness="0"
                      Foreground="{StaticResource AkcLogText}" FontFamily="{StaticResource AkcMono}" FontSize="11.5"
@@ -129,18 +155,22 @@
         </Border>
 
         <!-- Status bar -->
-        <Border Grid.Row="3" Background="{StaticResource AkcBgSoft}" BorderBrush="{StaticResource AkcBorder}" BorderThickness="0,1,0,0" Padding="12,2">
+        <Border Grid.Row="4" Background="{StaticResource AkcBgSoft}" BorderBrush="{StaticResource AkcBorder}" BorderThickness="0,1,0,0" Padding="12,2">
             <DockPanel LastChildFill="False">
                 <Button DockPanel.Dock="Left" Content="{Binding ShowLog, Converter={x:Static v:LogToggleText.Instance}}" Command="{Binding ToggleLogCommand}" Padding="8,2" Margin="0,3"/>
                 <Button DockPanel.Dock="Left" Content="Clear" Command="{Binding ClearLogCommand}" Padding="8,2" Margin="6,3"/>
                 <Button DockPanel.Dock="Left" Content="Open log folder" Command="{Binding OpenLogFolderCommand}" Padding="8,2" Margin="0,3"/>
                 <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="{StaticResource AkcMuted}" FontSize="11"
-                           Text="Andy Kemp Consulting Ltd · andykemp.com"/>
+                           Text="Andy Kemp Consulting Ltd · www.andykemp.com"/>
+                <Button DockPanel.Dock="Right" Style="{StaticResource PrimaryButton}" Content="{Binding UpdateButtonText}"
+                        Command="{Binding InstallUpdateCommand}" Padding="10,2" Margin="0,3,12,3"
+                        ToolTip="A newer version is available at downloads.andykemp.com"
+                        Visibility="{Binding AvailableUpdate, Converter={x:Static v:NotNullToVisibility.Instance}}"/>
             </DockPanel>
         </Border>
 
         <!-- Busy overlay -->
-        <Grid Grid.RowSpan="4" Background="#99FFFFFF"
+        <Grid Grid.RowSpan="5" Background="#99FFFFFF"
               Visibility="{Binding State.IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
             <Border Style="{StaticResource Card}" Width="420" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="22">
                 <Border.Effect>

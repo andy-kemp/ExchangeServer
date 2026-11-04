@@ -167,3 +167,102 @@ public static class AuthRenewDialog
         return ((string)pick.SelectedItem, now.IsChecked == true);
     }
 }
+
+public static class OptionsDialog
+{
+    /// <returns>True if saved.</returns>
+    public static bool Show(ExchangeCertManager.ViewModels.UserSettings settings, Action checkNow)
+    {
+        var w = DialogKit.NewWindow("Options", 480);
+        var root = new StackPanel { Margin = new Thickness(20) };
+        root.Children.Add(DialogKit.Text("Options", bold: true, size: 15));
+
+        root.Children.Add(DialogKit.Text("Updates", bold: true, size: 12.5));
+        var startup = new CheckBox
+        {
+            IsChecked = settings.CheckForUpdatesAtStartup,
+            Margin = new Thickness(0, 0, 0, 6),
+            Content = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = "Check for a new version when the app opens" },
+        };
+        root.Children.Add(startup);
+        var hint = DialogKit.Text($"You have version {ExchangeCertManager.Services.UpdateService.CurrentText}. New versions come from downloads.andykemp.com and are checked against their SHA-256 before they're installed. Nothing changes until you choose to update.", size: 12);
+        hint.Foreground = (Brush)Application.Current.FindResource("AkcMuted");
+        root.Children.Add(hint);
+        var now = new Button { Content = "Check now", HorizontalAlignment = HorizontalAlignment.Left, Padding = new Thickness(12, 4, 12, 4) };
+        now.Click += (_, _) =>
+        {
+            settings.CheckForUpdatesAtStartup = startup.IsChecked == true;
+            settings.Save();
+            w.DialogResult = true;
+            checkNow();
+        };
+        root.Children.Add(now);
+
+        root.Children.Add(DialogKit.Buttons(w, "Save"));
+        w.Content = root;
+        if (w.ShowDialog() != true) return false;
+        settings.CheckForUpdatesAtStartup = startup.IsChecked == true;
+        settings.Save();
+        return true;
+    }
+}
+
+public static class UpdateDialog
+{
+    /// <returns>True to update now.</returns>
+    public static bool Ask(ExchangeCertManager.Services.UpdateInfo info)
+    {
+        var w = DialogKit.NewWindow("Update available", 500);
+        var root = new StackPanel { Margin = new Thickness(20) };
+        root.Children.Add(DialogKit.Text($"Version {info.Version} is available", bold: true, size: 15));
+        var when = string.IsNullOrEmpty(info.PublishedText) ? "" : $", released {info.PublishedText}";
+        root.Children.Add(DialogKit.Text($"You have version {ExchangeCertManager.Services.UpdateService.CurrentText}{when}. Updating downloads the new version, checks its SHA-256, replaces this EXE in the same folder and restarts the app. The Let's Encrypt renewal task keeps working."));
+        var link = new TextBlock { Margin = new Thickness(0, 0, 0, 4) };
+        var h = new System.Windows.Documents.Hyperlink(new System.Windows.Documents.Run("What's new"));
+        h.Click += (_, _) => ExchangeCertManager.Services.UpdateService.OpenUrl("https://docs.andykemp.com/exchange-cert-manager/whats-new/");
+        link.Inlines.Add(h);
+        root.Children.Add(link);
+        var buttons = DialogKit.Buttons(w, "Update and restart");
+        if (buttons.Children[0] is Button later) later.Content = "Later";
+        root.Children.Add(buttons);
+        w.Content = root;
+        return w.ShowDialog() == true;
+    }
+}
+
+public static class AboutDialog
+{
+    public static void Show()
+    {
+        var w = DialogKit.NewWindow("About Exchange Certificate Manager", 460);
+        var root = new StackPanel { Margin = new Thickness(22) };
+        root.Children.Add(new Image
+        {
+            Source = new System.Windows.Media.Imaging.BitmapImage(new Uri("pack://application:,,,/Assets/akc-logo.png")),
+            Height = 38, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 0, 0, 14),
+        });
+        root.Children.Add(DialogKit.Text("Exchange Certificate Manager", bold: true, size: 16));
+        var ver = DialogKit.Text($"Version {ExchangeCertManager.Services.UpdateService.CurrentText}", bold: true, size: 12.5);
+        ver.Foreground = (Brush)Application.Current.FindResource("AkcOk");
+        root.Children.Add(ver);
+        root.Children.Add(DialogKit.Text("Request, renew, deploy and health-check Exchange Server certificates and URLs, including Let's Encrypt with automatic renewal. For Exchange 2016, 2019 and Subscription Edition."));
+        root.Children.Add(DialogKit.Text("© Andy Kemp Consulting Ltd. MIT licence.", size: 12));
+        foreach (var (text, url) in new[]
+                 {
+                     ("www.andykemp.com", "https://www.andykemp.com/"),
+                     ("Documentation", "https://docs.andykemp.com/exchange-cert-manager/"),
+                     ("Downloads", ExchangeCertManager.Services.UpdateService.DownloadsPage),
+                 })
+        {
+            var t = new TextBlock { Margin = new Thickness(0, 0, 0, 4) };
+            var h = new System.Windows.Documents.Hyperlink(new System.Windows.Documents.Run(text));
+            h.Click += (_, _) => ExchangeCertManager.Services.UpdateService.OpenUrl(url);
+            t.Inlines.Add(h);
+            root.Children.Add(t);
+        }
+        var close = new Button { Content = "Close", IsDefault = true, IsCancel = true, MinWidth = 90, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
+        root.Children.Add(close);
+        w.Content = root;
+        w.ShowDialog();
+    }
+}

@@ -50,3 +50,11 @@ public sealed class DateText : IValueConverter
         value is DateTime d ? d.ToString("dd MMM yyyy") : "";
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
 }
+
+public sealed class NotNullToVisibility : IValueConverter
+{
+    public static NotNullToVisibility Instance { get; } = new();
+    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
+        value is null ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
+}
