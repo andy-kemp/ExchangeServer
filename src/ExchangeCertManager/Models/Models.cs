@@ -169,6 +169,10 @@ public sealed class VdirEntry
     public required string Identity { get; init; }
     public string Internal { get; init; } = "";
     public string External { get; init; } = "";
+    /// <summary>Outlook Anywhere only: the current client authentication methods (Set-OutlookAnywhere needs them
+    /// passed again when a hostname is first set).</summary>
+    public string InternalAuth { get; init; } = "";
+    public string ExternalAuth { get; init; } = "";
 
     public string InternalText => string.IsNullOrWhiteSpace(Internal) ? "(none)" : Internal;
     public string ExternalText => Kind == "Autodiscover" ? "n/a" : string.IsNullOrWhiteSpace(External) ? "(none)" : External;
