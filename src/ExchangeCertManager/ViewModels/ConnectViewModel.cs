@@ -12,6 +12,46 @@ public sealed partial class ConnectViewModel : PageViewModel
         LocalServer = ExchangeSession.DetectLocalExchangeServer();
         _server = LocalServer ?? State.Settings.LastServer;
         _userName = $"{Environment.UserDomainName}\\{Environment.UserName}";
+        _ = DiscoverAsync();
+    }
+
+    /// <summary>Exchange servers found in AD, for the Server box's list.</summary>
+    public System.Collections.ObjectModel.ObservableCollection<DiscoveredServer> Discovered { get; } = new();
+    [ObservableProperty] private string _discoveryText = "Looking for Exchange servers in Active Directory…";
+
+    [RelayCommand]
+    private async Task DiscoverAsync()
+    {
+        if (State.IsDemo)
+        {
+            Discovered.Clear();
+            Discovered.Add(new DiscoveredServer("EX01", "ex01.contoso.com", "Exchange SE (15.2.2562)", "London", true));
+            Discovered.Add(new DiscoveredServer("EX02", "ex02.contoso.com", "Exchange SE (15.2.2562)", "London", true));
+            DiscoveryText = "Found 2 Exchange servers in Active Directory. Pick one, or type another.";
+            return;
+        }
+        DiscoveryText = "Looking for Exchange servers in Active Directory…";
+        try
+        {
+            var servers = await ExchangeDiscovery.FindAsync();
+            Discovered.Clear();
+            foreach (var s in servers) Discovered.Add(s);
+            if (servers.Count == 0)
+            {
+                DiscoveryText = "No Exchange servers found in Active Directory. Type the server's FQDN.";
+                return;
+            }
+            DiscoveryText = $"Found {servers.Count} Exchange server{(servers.Count == 1 ? "" : "s")} in Active Directory" +
+                            (servers.Any(s => s.InThisSite) ? " (this site's listed first)" : "") + ". Pick one, or type another.";
+            Log.Info($"Exchange servers in AD: {string.Join(", ", servers.Select(s => s.Fqdn))}");
+            // Fill the box if it's empty (an Exchange server running the app, or the last server used, wins)
+            if (string.IsNullOrWhiteSpace(Server)) Server = servers[0].Fqdn;
+        }
+        catch (Exception ex)
+        {
+            DiscoveryText = "Couldn't look Exchange servers up in Active Directory (is this machine domain-joined?). Type the server's FQDN.";
+            Log.Warn($"Exchange server lookup in AD failed: {ex.Message}");
+        }
     }
 
     public override string Title => "Connect to Exchange";
