@@ -15,7 +15,7 @@
             </Border.Effect>
             <Grid>
                 <!-- Soft copper glow behind Atlas -->
-                <Ellipse Width="360" Height="300" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-40,-20" IsHitTestVisible="False">
+                <Ellipse Width="320" Height="270" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-24,-10" IsHitTestVisible="False">
                     <Ellipse.Fill>
                         <RadialGradientBrush>
                             <GradientStop Color="#55BD7448" Offset="0" />
@@ -55,9 +55,9 @@
             </Grid>
         </Border>
 
-        <!-- Atlas, over the card: feet just above the footer line, head above the card's top edge -->
-        <Image Source="pack://application:,,,/Assets/atlas.png" Height="352" HorizontalAlignment="Right" VerticalAlignment="Bottom"
-               Margin="0,0,58,60" RenderOptions.BitmapScalingMode="HighQuality" IsHitTestVisible="False">
+        <!-- Atlas, over the card: feet just above the footer line, head just inside the card -->
+        <Image Source="pack://application:,,,/Assets/atlas.png" Height="300" HorizontalAlignment="Right" VerticalAlignment="Bottom"
+               Margin="0,0,66,60" RenderOptions.BitmapScalingMode="HighQuality" IsHitTestVisible="False">
             <Image.Effect>
                 <DropShadowEffect BlurRadius="18" ShadowDepth="4" Direction="270" Opacity="0.5" />
             </Image.Effect>
