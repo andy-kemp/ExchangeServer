@@ -49,6 +49,7 @@
     <Resource Include="Assets\akc-logo.png" />
     <Resource Include="Assets\akc-logo-header.png" />
     <Resource Include="Assets\ak-monogram.png" />
+    <Resource Include="Assets\atlas.png" />
   </ItemGroup>
 
 </Project>
