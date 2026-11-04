@@ -219,6 +219,13 @@ public static class DemoMode
             await Settle(window);
             Save(window, Path.Combine(folder, file));
         }
+
+        // Help > About
+        var about = new AboutWindow { Owner = window, WindowStartupLocation = WindowStartupLocation.CenterScreen };
+        about.Show();
+        await Settle(about);
+        Save(about, Path.Combine(folder, "11-about.png"));
+        about.Close();
     }
 
     public static async Task CaptureSplashAsync(SplashWindow splash, string folder)
