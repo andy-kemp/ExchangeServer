@@ -7,9 +7,32 @@
             <StackPanel>
                 <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="1" Content="Exchange server"/>
                 <TextBlock Style="{StaticResource Hint}" Text="{Binding LocalServerText}" Margin="0,0,0,6"/>
-                <TextBlock Style="{StaticResource FieldLabel}" Text="Server FQDN"/>
-                <TextBox Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}"/>
-                <TextBlock Style="{StaticResource Hint}" Text="Any Mailbox server in the organisation, for example ex01.ad.contoso.com. The app finds the rest."/>
+                <TextBlock Style="{StaticResource FieldLabel}" Text="Server"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <!-- Pick a server found in AD, or type any FQDN -->
+                    <ComboBox IsEditable="True" IsTextSearchEnabled="True" TextSearch.TextPath="Fqdn"
+                              ItemsSource="{Binding Discovered}"
+                              Text="{Binding Server, UpdateSourceTrigger=PropertyChanged}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,2">
+                                    <TextBlock Text="{Binding Fqdn}" FontWeight="SemiBold"/>
+                                    <TextBlock FontSize="11.5" Opacity="0.75">
+                                        <Run Text="{Binding Version, Mode=OneWay}"/><Run Text="   ·   "/><Run Text="{Binding Site, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Grid.Column="1" Content="Find again" Command="{Binding DiscoverCommand}" Margin="8,0,0,0"
+                            ToolTip="Look the Exchange servers up in Active Directory again"/>
+                </Grid>
+                <TextBlock Style="{StaticResource Hint}" Text="{Binding DiscoveryText}"/>
+                <TextBlock Style="{StaticResource Hint}" Text="Any Mailbox server in the organisation will do: the app finds the rest."/>
 
                 <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="2" Content="Sign in" Margin="0,18,0,8"/>
                 <CheckBox Content="Use my current Windows sign-in (Kerberos)" IsChecked="{Binding UseCurrentUser}"/>
