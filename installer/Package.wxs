@@ -8,6 +8,9 @@
 
   Silent install, for example from Intune:   msiexec /i ExchangeCertManager.msi /qn
   Turn off the in-app updater (the MSI then manages versions):   msiexec /i ExchangeCertManager.msi /qn UPDATES=0
+
+  With UPDATES=1 (the default) the app replaces the installed EXE itself. A repair never puts an older EXE back
+  (Windows Installer keeps the higher file version), and uninstall also removes the updater's .old/.new files.
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
   <Package Name="Exchange Certificate Manager"
@@ -42,6 +45,10 @@
     <Feature Id="Main" Title="Exchange Certificate Manager" Level="1">
       <Component Id="MainExe" Directory="INSTALLFOLDER">
         <File Id="ExchangeCertManagerExe" Source="$(var.Publish)\ExchangeCertManager.exe" KeyPath="yes" />
+        <!-- The in-app updater keeps the previous EXE as .old until the next start, and downloads to .new -->
+        <RemoveFile Id="RemoveUpdateOld" Name="ExchangeCertManager.exe.old" On="uninstall" />
+        <RemoveFile Id="RemoveUpdateNew" Name="ExchangeCertManager.exe.new" On="uninstall" />
+        <RemoveFolder Id="RemoveInstallFolder" On="uninstall" />
       </Component>
 
       <Component Id="Settings" Directory="INSTALLFOLDER">
@@ -52,7 +59,7 @@
       </Component>
 
       <Component Id="StartMenuShortcut" Directory="ProgramMenuFolder">
-        <Shortcut Id="AppShortcut" Name="Exchange Certificate Manager" Description="Exchange certificates and URLs (Andy Kemp Consulting)"
+        <Shortcut Id="AppShortcut" Name="Exchange Certificate Manager" Description="Exchange certificates, URLs and domains (Andy Kemp Consulting)"
                   Target="[INSTALLFOLDER]ExchangeCertManager.exe" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
         <RegistryValue Root="HKLM" Key="SOFTWARE\Andy Kemp Consulting\Exchange Certificate Manager" Name="StartMenuShortcut" Value="1" Type="integer" KeyPath="yes" />
       </Component>

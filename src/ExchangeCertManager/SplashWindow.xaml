@@ -43,7 +43,7 @@
                         <TextBlock x:Name="UpdatingLabel" Text="Updating" Foreground="#B9AFA6" FontSize="16" FontWeight="SemiBold" Visibility="Collapsed" />
                         <TextBlock Text="Exchange Certificate Manager" Foreground="White" FontSize="28" FontWeight="Bold" TextWrapping="Wrap" />
                         <TextBlock x:Name="VersionText" Text="Version" Foreground="#7FBF63" FontSize="14" FontWeight="SemiBold" Margin="0,6,0,0" />
-                        <TextBlock x:Name="Tagline" Text="Request, renew, deploy and health-check Exchange certificates and URLs. Runs as you."
+                        <TextBlock x:Name="Tagline" Text="Certificates, URLs and domains for Exchange Server. Runs as you."
                                    Foreground="#B9AFA6" FontSize="13" Margin="0,10,0,0" TextWrapping="Wrap" />
                     </StackPanel>
 
