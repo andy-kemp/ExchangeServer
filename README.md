@@ -39,11 +39,11 @@ No .NET install is needed; the EXE is self-contained.
 
 ## Download and run
 
-Grab `ExchangeCertManager.exe` from the [latest release](https://github.com/andy-kemp/ExchangeServer/releases/latest), copy it somewhere permanent such as `C:\ExchangeCertManager`, and run it. It asks for elevation because it writes ACME challenge files to IIS and can register the renewal task.
+Download [`ExchangeCertManager.exe`](https://downloads.andykemp.com/exchange-cert-manager/latest/ExchangeCertManager.exe) ([SHA-256](https://downloads.andykemp.com/exchange-cert-manager/latest/SHA256SUMS.txt)), copy it somewhere permanent such as `C:\ExchangeCertManager`, and run it. It asks for elevation because it writes ACME challenge files to IIS and can register the renewal task.
 
 ## Build
 
-Every push builds the EXE on a Windows runner and captures demo screenshots (`ExchangeCertManager.exe --screenshots <folder>`, sample Contoso data, no Exchange needed). Pushing a `v*` tag publishes a GitHub release with the EXE attached. Run `ExchangeCertManager.exe --demo` to explore the app without Exchange.
+Every push builds the EXE on a Windows runner and captures demo screenshots (`ExchangeCertManager.exe --screenshots <folder>`, sample Contoso data, no Exchange needed). When `<Version>` in the project file changes, a build on main publishes the EXE to downloads.andykemp.com (`exchange-cert-manager/<version>/` and `latest/`); a version is never overwritten. Run `ExchangeCertManager.exe --demo` to explore the app without Exchange.
 
 ```powershell
 dotnet publish src/ExchangeCertManager/ExchangeCertManager.csproj -c Release -o publish
