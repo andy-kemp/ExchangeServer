@@ -266,3 +266,47 @@ public static class AboutDialog
         w.ShowDialog();
     }
 }
+
+public static class CreateGmsaDialog
+{
+    /// <returns>The options, or null if cancelled.</returns>
+    public static ExchangeCertManager.Services.GmsaSetupOptions? Show(string suggestedName)
+    {
+        var w = DialogKit.NewWindow("Create a gMSA for the renewal task", 560);
+        var root = new StackPanel { Margin = new Thickness(20) };
+        root.Children.Add(DialogKit.Text("Create a gMSA for the renewal task", bold: true, size: 15));
+        root.Children.Add(DialogKit.Text("A group Managed Service Account has no password for anyone to know or rotate: AD changes it and Task Scheduler fetches it. This creates one (or reuses it if it exists), lets this server use it, makes it a local administrator here, and gives it only the Exchange rights renewal needs. You need rights to create accounts in AD (for example Domain Admins) and Organization Management."));
+
+        root.Children.Add(DialogKit.Text("Name", bold: true, size: 12.5));
+        var name = new TextBox { Text = suggestedName, Margin = new Thickness(0, 0, 0, 4) };
+        root.Children.Add(name);
+        var nameHint = DialogKit.Text("Up to 15 characters: AD cuts a gMSA's account name at 15.", size: 12);
+        nameHint.Foreground = (Brush)Application.Current.FindResource("AkcMuted");
+        root.Children.Add(nameHint);
+
+        root.Children.Add(DialogKit.Text("Which servers can use it", bold: true, size: 12.5));
+        var thisServer = new RadioButton { IsChecked = true, Margin = new Thickness(0, 0, 0, 4), Content = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = "Only this server (works straight away)" } };
+        var allServers = new RadioButton { Margin = new Thickness(0, 0, 0, 10), Content = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = "Every Exchange server (the Exchange Servers group; a server added to it needs a restart before it can use the gMSA)" } };
+        root.Children.Add(thisServer);
+        root.Children.Add(allServers);
+
+        var roleGroup = new CheckBox { IsChecked = true, Margin = new Thickness(0, 0, 0, 6), Content = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = $"Create the '{ExchangeCertManager.Services.GmsaSetupService.RoleGroupName}' Exchange role group (Exchange Server Certificates and View-Only Configuration) and add the gMSA to it" } };
+        root.Children.Add(roleGroup);
+        var backdate = new CheckBox { Margin = new Thickness(0, 0, 0, 4), Content = new TextBlock { TextWrapping = TextWrapping.Wrap, Text = "If the forest has no KDS root key yet, back-date it so it works now (labs only: in production, wait the 10 hours Microsoft recommends)" } };
+        root.Children.Add(backdate);
+
+        var error = DialogKit.Text("", size: 12);
+        error.Foreground = (Brush)Application.Current.FindResource("AkcDanger");
+        root.Children.Add(error);
+
+        root.Children.Add(DialogKit.Buttons(w, "Create", () =>
+        {
+            var problem = ExchangeCertManager.Services.GmsaSetupService.ValidateName(name.Text.Trim().TrimEnd('$'));
+            error.Text = problem ?? "";
+            return problem is null;
+        }));
+        w.Content = root;
+        if (w.ShowDialog() != true) return null;
+        return new ExchangeCertManager.Services.GmsaSetupOptions(name.Text.Trim().TrimEnd('$'), allServers.IsChecked == true, backdate.IsChecked == true, roleGroup.IsChecked == true);
+    }
+}
