@@ -119,7 +119,16 @@
                     <Button Style="{StaticResource DangerButton}" Content="Stop renewing selected" Command="{Binding DeleteRenewalCommand}" Padding="12,6"/>
                 </StackPanel>
 
+                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                    <Button Content="Run task now" Command="{Binding RunTaskNowCommand}" Margin="0,0,8,0" ToolTip="Runs the task as its own account; it only renews what's due"/>
+                    <Button Content="Refresh" Command="{Binding RefreshTaskCommand}"/>
+                </StackPanel>
+
                 <TextBlock Style="{StaticResource FieldLabel}" Text="Daily task runs as" Margin="0,16,0,3"/>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                    <RadioButton Content="Group Managed Service Account (gMSA, no password)" IsChecked="{Binding UseGmsa}" Margin="0,0,18,0"/>
+                    <RadioButton Content="Service account with a password" IsChecked="{Binding UsePassword}"/>
+                </StackPanel>
                 <Grid MaxWidth="640" HorizontalAlignment="Left">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="260"/>
@@ -127,12 +136,13 @@
                         <ColumnDefinition Width="220"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBox Grid.Column="0" Text="{Binding TaskUser, UpdateSourceTrigger=PropertyChanged}" ToolTip="DOMAIN\account"/>
-                    <PasswordBox Grid.Column="2" x:Name="TaskPasswordInput" PasswordChanged="OnTaskPasswordChanged" ToolTip="Password"/>
+                    <TextBox Grid.Column="0" Text="{Binding TaskUser, UpdateSourceTrigger=PropertyChanged}" ToolTip="DOMAIN\account, or DOMAIN\gmsa$"/>
+                    <PasswordBox Grid.Column="2" x:Name="TaskPasswordInput" PasswordChanged="OnTaskPasswordChanged" ToolTip="Password"
+                                 Visibility="{Binding UsePassword, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     <Button Grid.Column="3" Content="Register task" Command="{Binding RegisterTaskCommand}" Margin="10,0,0,0"/>
                 </Grid>
                 <TextBlock Style="{StaticResource Hint}"
-                           Text="Use a dedicated service account with the Exchange certificate role and local admin here. Keep this EXE in a permanent folder (for example C:\ExchangeCertManager); the task runs it from where it is now."/>
+                           Text="A gMSA is best: AD manages its password, so there's nothing to store or rotate. It needs this server allowed to retrieve its password, local admin here, and an Exchange role group with the Exchange Server Certificates and View-Only Configuration roles. Registering again replaces the task, so you can move an existing task to a gMSA at any time. Keep this EXE in a permanent folder (for example C:\ExchangeCertManager); the task runs it from where it is now."/>
             </StackPanel>
         </Border>
     </StackPanel>

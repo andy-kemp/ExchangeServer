@@ -118,10 +118,48 @@ public sealed partial class AcmeViewModel : PageViewModel
     {
         Renewals.Clear();
         foreach (var r in AcmeService.LoadRenewals()) Renewals.Add(r);
-        TaskStatus = RenewalTask.Exists()
-            ? $"The daily renewal task is registered. It renews anything within {RenewalRunner.RenewWithinDays} days of expiry."
-            : "No renewal task is registered yet.";
+        var info = RenewalTask.Info();
+        if (info is null)
+        {
+            TaskStatus = "No renewal task is registered yet.";
+            return;
+        }
+        var last = info.LastRun is { } l ? $"Last run {l:g}: {RenewalTask.ResultText(info.LastResult)}." : "It hasn't run yet.";
+        var next = info.NextRun is { } n ? $" Next run {n:g}." : "";
+        TaskStatus = $"The daily renewal task runs as {info.UserId}{(info.IsGmsa ? " (gMSA)" : "")} and renews anything within {RenewalRunner.RenewWithinDays} days of expiry. {last}{next}";
+        // Show what's registered, so moving to a gMSA starts from the current account
+        if (info.IsGmsa) { UseGmsa = true; TaskUser = info.UserId; }
     }
+
+    /// <summary>Run the task as a group Managed Service Account: no password, Windows gets it from AD.</summary>
+    [ObservableProperty] private bool _useGmsa;
+    public bool UsePassword { get => !UseGmsa; set => UseGmsa = !value; }
+    partial void OnUseGmsaChanged(bool value) => OnPropertyChanged(nameof(UsePassword));
+
+    [RelayCommand]
+    private void RunTaskNow()
+    {
+        if (State.IsDemo) { AppState.Inform("Nothing runs in demo mode."); return; }
+        if (!RenewalTask.Exists()) { AppState.Inform("Register the task first."); return; }
+        if (!AppState.Confirm("Run the renewal task now, as its own account? It only renews certificates that are due, so this is a safe way to check the account works. Refresh the page in a minute to see the result.")) return;
+        try { RenewalTask.RunNow(); }
+        catch (Exception ex) { AppState.Inform($"Couldn't start the task: {ex.Message}"); return; }
+        _ = RefreshTaskStatusLaterAsync();
+    }
+
+    private async Task RefreshTaskStatusLaterAsync()
+    {
+        // Give it time to log on and do its work
+        for (var i = 0; i < 12; i++)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10));
+            ReloadRenewals();
+            if (RenewalTask.Info() is { State: not "Running" }) break;
+        }
+    }
+
+    [RelayCommand]
+    private void RefreshTask() => ReloadRenewals();
 
     [RelayCommand]
     private Task SuggestAsync() => State.RunAsync("Reading the configured URLs", async () =>
@@ -208,11 +246,24 @@ public sealed partial class AcmeViewModel : PageViewModel
     [RelayCommand]
     private void RegisterTask()
     {
-        if (string.IsNullOrWhiteSpace(TaskUser) || TaskPassword.Length == 0)
+        if (State.IsDemo) { AppState.Inform("Nothing is registered in demo mode."); return; }
+        if (string.IsNullOrWhiteSpace(TaskUser))
         {
-            AppState.Inform("Enter the account and password the task should run as. It needs Organization Management (or the Exchange certificate role) and local admin on this machine.");
+            AppState.Inform("Enter the account the task should run as (DOMAIN\\name, or DOMAIN\\name$ for a gMSA).");
             return;
         }
+        if (!UseGmsa && TaskPassword.Length == 0)
+        {
+            AppState.Inform("Enter the account's password. It needs the Exchange certificate role and local admin on this machine. Or use a gMSA, which has no password to enter.");
+            return;
+        }
+        if (UseGmsa && !AppState.Confirm(
+                $"Register the task to run as the gMSA {TaskUser.Trim().TrimEnd('$')}$?\n\nBefore it can run, the gMSA needs:\n" +
+                $"• this server allowed to retrieve its password (PrincipalsAllowedToRetrieveManagedPassword), and Install-ADServiceAccount run here\n" +
+                $"• local Administrators on this server (and on the other Exchange servers for HTTP validation, which writes to their web roots)\n" +
+                $"• membership of an Exchange role group with the Exchange Server Certificates and View-Only Configuration roles\n\n" +
+                "Use 'Run now' afterwards to check it works."))
+            return;
 
         var exe = Environment.ProcessPath ?? "";
         var downloads = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -222,7 +273,7 @@ public sealed partial class AcmeViewModel : PageViewModel
 
         try
         {
-            RenewalTask.Register(TaskUser.Trim(), CertificateService.ToSecure(TaskPassword));
+            RenewalTask.Register(TaskUser.Trim(), UseGmsa ? null : CertificateService.ToSecure(TaskPassword));
             ReloadRenewals();
         }
         catch (Exception ex)
