@@ -30,39 +30,75 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Menu: only what this app needs, as WinImagePrep -->
+        <!-- Menu bar: the same layout, icons and wording as Win11 Image Prep, with only what this app needs -->
         <Menu Grid.Row="0">
             <MenuItem Header="_File">
-                <MenuItem Header="Open _log folder" Command="{Binding OpenLogFolderCommand}" ToolTip="C:\ExchangeCertManager\Logs"/>
+                <MenuItem Header="Open _Log Folder" Command="{Binding OpenLogFolderCommand}" ToolTip="Open C:\ExchangeCertManager\Logs">
+                    <MenuItem.Icon>
+                        <TextBlock Text="&#xE838;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource AkcCopper}"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="E_xit" Command="{Binding ExitCommand}"/>
+                <MenuItem Header="E_xit" Command="{Binding ExitCommand}" ToolTip="Close the application"/>
             </MenuItem>
             <MenuItem Header="_Tools">
-                <MenuItem Header="_Check for updates..." Command="{Binding CheckForUpdatesCommand}" ToolTip="Look for a newer version at downloads.andykemp.com"/>
-                <MenuItem Header="_Options..." Command="{Binding OpenOptionsCommand}" ToolTip="Update settings"/>
+                <MenuItem Header="_Check for Updates..." Command="{Binding CheckForUpdatesCommand}" ToolTip="Check for a newer version at downloads.andykemp.com">
+                    <MenuItem.Icon>
+                        <TextBlock Text="&#xE895;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource AkcCopper}"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <Separator/>
+                <MenuItem Header="_Options..." Command="{Binding OpenOptionsCommand}" ToolTip="Configure application settings">
+                    <MenuItem.Icon>
+                        <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource AkcCopper}"/>
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="_Help">
-                <MenuItem Header="_Documentation" Command="{Binding OpenDocsCommand}" ToolTip="docs.andykemp.com/exchange-cert-manager"/>
-                <MenuItem Header="_Quick start" Command="{Binding OpenQuickStartCommand}"/>
-                <MenuItem Header="_Troubleshooting" Command="{Binding OpenTroubleshootingCommand}"/>
-                <MenuItem Header="What's _new" Command="{Binding OpenWhatsNewCommand}" ToolTip="Release notes for each version"/>
+                <MenuItem Header="_User Guide" Command="{Binding OpenQuickStartCommand}" ToolTip="Open the quick start at docs.andykemp.com">
+                    <MenuItem.Icon>
+                        <TextBlock Text="&#xE82D;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource AkcCopper}"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Online Documentation" Command="{Binding OpenDocsCommand}" ToolTip="View the documentation at docs.andykemp.com">
+                    <MenuItem.Icon>
+                        <TextBlock Text="&#xE774;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource AkcCopper}"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="_Downloads" Command="{Binding OpenDownloadsCommand}" ToolTip="The latest version at downloads.andykemp.com">
+                    <MenuItem.Icon>
+                        <TextBlock Text="&#xE736;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource AkcCopper}"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="Do_wnloads" Command="{Binding OpenDownloadsCommand}" ToolTip="downloads.andykemp.com"/>
-                <MenuItem Header="Screen _tour" Command="{Binding OpenTourCommand}" ToolTip="demos.andykemp.com"/>
-                <MenuItem Header="_Report an issue" Command="{Binding ReportIssueCommand}" ToolTip="Contact Andy Kemp Consulting"/>
+                <MenuItem Header="_Report Issue" Command="{Binding ReportIssueCommand}" ToolTip="Report a problem or request a feature: contact Andy Kemp Consulting">
+                    <MenuItem.Icon>
+                        <TextBlock Text="&#xEBE8;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource AkcCopper}"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="Release _Notes" Command="{Binding OpenWhatsNewCommand}" ToolTip="What's new in each version, at docs.andykemp.com">
+                    <MenuItem.Icon>
+                        <TextBlock Text="&#xE8A5;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource AkcCopper}"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <Separator/>
-                <MenuItem Header="_About" Command="{Binding ShowAboutCommand}"/>
+                <MenuItem Header="_About" Command="{Binding ShowAboutCommand}" ToolTip="About Exchange Certificate Manager">
+                    <MenuItem.Icon>
+                        <TextBlock Text="&#xE946;" FontFamily="Segoe MDL2 Assets" FontSize="14" Foreground="{StaticResource AkcCopper}"/>
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
         </Menu>
 
-        <!-- Header -->
-        <Border Grid.Row="1" Background="White" BorderBrush="{StaticResource AkcBorder}" BorderThickness="0,0,0,1" Padding="18,10">
+        <!-- Brand header, as Win11 Image Prep: logo, divider, title and subtitle -->
+        <Border Grid.Row="1" Background="White" BorderBrush="{StaticResource AkcBorder}" BorderThickness="0,0,0,1" Padding="20,14">
             <DockPanel LastChildFill="False">
-                <Image DockPanel.Dock="Left" Source="pack://application:,,,/Assets/akc-logo.png" Height="30" Margin="0,0,14,0"
+                <Image DockPanel.Dock="Left" Source="pack://application:,,,/Assets/akc-logo.png" Height="44"
                        RenderOptions.BitmapScalingMode="HighQuality" VerticalAlignment="Center"/>
+                <Border DockPanel.Dock="Left" Width="1" Background="{StaticResource AkcBorder}" Margin="18,4,18,4"/>
                 <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-                    <TextBlock Text="Exchange Certificate Manager" FontWeight="Bold" FontSize="16" Foreground="{StaticResource AkcHeading}"/>
-                    <TextBlock Text="Exchange 2016, 2019 and Subscription Edition" FontSize="11" Foreground="{StaticResource AkcMuted}"/>
+                    <TextBlock Text="Exchange Certificate Manager" FontSize="20" FontWeight="Bold" Foreground="{StaticResource AkcHeading}"/>
+                    <TextBlock Text="Certificates and URLs for Exchange 2016, 2019 and Subscription Edition" Foreground="{StaticResource AkcMuted}" FontSize="12.5"/>
                 </StackPanel>
                 <Border DockPanel.Dock="Right" VerticalAlignment="Center">
                     <Border.Style>
