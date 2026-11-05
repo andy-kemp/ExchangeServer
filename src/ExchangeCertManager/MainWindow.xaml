@@ -20,6 +20,7 @@
         <DataTemplate DataType="{x:Type vm:HealthViewModel}"><v:HealthView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:UrlsViewModel}"><v:UrlsView/></DataTemplate>
         <DataTemplate DataType="{x:Type vm:DomainsViewModel}"><v:DomainsView/></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:AlertsViewModel}"><v:AlertsView/></DataTemplate>
     </Window.Resources>
 
     <Grid Background="{StaticResource AkcBg}">
@@ -139,6 +140,7 @@
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Health check" IsChecked="{Binding IsHealthPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Virtual directories" IsChecked="{Binding IsUrlsPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Accepted domains" IsChecked="{Binding IsDomainsPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
+                        <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Alerts" IsChecked="{Binding IsAlertsPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <TextBlock Text="TASKS" FontSize="10.5" FontWeight="Bold" Foreground="{StaticResource AkcMuted}" Margin="12,16,0,4"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="New / renew request" IsChecked="{Binding IsRequestPage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>
                         <RadioButton Style="{StaticResource NavItem}" GroupName="Nav" Content="Complete request" IsChecked="{Binding IsCompletePage, Mode=TwoWay}" IsEnabled="{Binding IsConnected}"/>

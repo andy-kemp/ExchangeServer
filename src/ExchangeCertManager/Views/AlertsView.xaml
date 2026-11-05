@@ -1,0 +1,129 @@
+<UserControl x:Class="ExchangeCertManager.Views.AlertsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="clr-namespace:ExchangeCertManager.Views">
+    <StackPanel>
+        <!-- The nightly task: alerts only happen if it runs -->
+        <Border Style="{StaticResource Pill}" Tag="{Binding TaskState}" HorizontalAlignment="Stretch" CornerRadius="8" Padding="12,8" Margin="0,0,0,12">
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <Button Content="Set up the task" Command="{Binding SetUpTaskCommand}" Margin="0,0,6,0" Padding="10,4"/>
+                    <Button Content="Run task now" Command="{Binding RunTaskNowCommand}" Margin="0,0,6,0" Padding="10,4"/>
+                    <Button Content="Refresh" Command="{Binding RefreshTaskCommand}" Padding="10,4"/>
+                </StackPanel>
+                <TextBlock Text="{Binding TaskStatus}" TextWrapping="Wrap" FontWeight="Normal" FontSize="12.5" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Who and when -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="1" Content="Who and when"/>
+                    <CheckBox IsChecked="{Binding Enabled}">
+                        <TextBlock Text="Send expiry alerts" FontWeight="SemiBold"/>
+                    </CheckBox>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Send to"/>
+                    <TextBox Style="{StaticResource MultiLineTextBox}" Text="{Binding RecipientsText, UpdateSourceTrigger=PropertyChanged}" Height="70"
+                             ToolTip="One address per line, or separated by commas"/>
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="Remind this many days before expiry"/>
+                    <TextBox Text="{Binding ReminderDaysText, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource AkcMono}"/>
+                    <TextBlock Style="{StaticResource Hint}" Text="One email per certificate for each of these, and daily once a certificate has expired. Reminders already sent aren't repeated."/>
+                    <CheckBox IsChecked="{Binding AlertRenewalFailures}" Margin="0,10,0,0">
+                        <TextBlock Text="Also email when a Let's Encrypt renewal fails, or the check can't reach Exchange" TextWrapping="Wrap"/>
+                    </CheckBox>
+                </StackPanel>
+            </Border>
+
+            <!-- How it's sent -->
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="2" Content="How it's sent"/>
+                    <RadioButton IsChecked="{Binding UseExchange}"><TextBlock Text="Through Exchange (SMTP)" TextWrapping="Wrap"/></RadioButton>
+                    <RadioButton IsChecked="{Binding UseSmtp2Go}" Margin="0,6,0,0"><TextBlock Text="Through SMTP2Go (works even when Exchange doesn't)" TextWrapping="Wrap"/></RadioButton>
+
+                    <TextBlock Style="{StaticResource FieldLabel}" Text="From address"/>
+                    <TextBox Text="{Binding From, UpdateSourceTrigger=PropertyChanged}" ToolTip="The address the alerts come from"/>
+
+                    <StackPanel Visibility="{Binding UseExchange, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid Margin="0,10,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="80"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="SMTP server" Margin="0,0,0,3"/>
+                                <TextBox Text="{Binding SmtpServer, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Style="{StaticResource FieldLabel}" Text="Port" Margin="0,0,0,3"/>
+                                <TextBox Text="{Binding SmtpPort, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                        </Grid>
+                        <CheckBox IsChecked="{Binding SmtpStartTls}" Margin="0,10,0,0"><TextBlock Text="Use TLS (STARTTLS)" TextWrapping="Wrap"/></CheckBox>
+                        <CheckBox IsChecked="{Binding SmtpUseWindowsAccount}" Margin="0,6,0,0"><TextBlock Text="Sign in with the Windows account (the task's account at night)" TextWrapping="Wrap"/></CheckBox>
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="Exchange won't take anonymous mail that claims to come from one of its own domains, or relay it outside. So either sign in with the Windows account (it needs a mailbox, or Send As on the From address), use a From address outside your accepted domains, or add a relay receive connector for this server. If TLS fails because of the certificate, the alert is sent without it rather than not at all."/>
+                    </StackPanel>
+
+                    <StackPanel Margin="0,10,0,0" Visibility="{Binding UseSmtp2Go, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Style="{StaticResource FieldLabel}" Text="SMTP2Go API key" Margin="0,0,0,3"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <PasswordBox x:Name="Smtp2GoKeyBox" PasswordChanged="OnSmtp2GoKeyChanged" ToolTip="Paste the API key"/>
+                            <Button Grid.Column="1" Content="Save" Command="{Binding SaveSmtp2GoKeyCommand}" Margin="8,0,0,0"/>
+                            <Button Grid.Column="2" Content="Remove" Command="{Binding RemoveSmtp2GoKeyCommand}" Margin="6,0,0,0"/>
+                        </Grid>
+                        <TextBlock Text="{Binding Smtp2GoStatus}" TextWrapping="Wrap" Margin="0,6,0,0" FontSize="12.5"/>
+                        <TextBlock Style="{StaticResource Hint}"
+                                   Text="In SMTP2Go: Sending > API Keys > Add API Key, with permission to send email. The From address must be a verified sender or domain. The key is stored encrypted on this machine (Administrators and SYSTEM only), never in the log."/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <Button Style="{StaticResource PrimaryButton}" Content="Save" Command="{Binding SaveCommand}" Margin="0,0,8,0"/>
+                        <Button Content="Send test email" Command="{Binding SendTestCommand}"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- What's watched -->
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <ContentControl Style="{StaticResource AkcSectionHeading}" Tag="3" Content="What's watched"/>
+                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+                <DataGrid ItemsSource="{Binding Rows}" MaxHeight="260">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="CERTIFICATE" Binding="{Binding Name}" Width="1.6*"/>
+                        <DataGridTextColumn Header="SERVERS" Binding="{Binding Servers}" Width="*"/>
+                        <DataGridTextColumn Header="SERVICES" Binding="{Binding Services}" Width="*"/>
+                        <DataGridTextColumn Header="EXPIRES" Binding="{Binding Expires, Converter={x:Static v:DateText.Instance}}" Width="110"/>
+                        <DataGridTemplateColumn Header="LEFT" Width="150">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Border Style="{StaticResource Pill}" Tag="{Binding State}">
+                                        <TextBlock Text="{Binding DaysText}"/>
+                                    </Border>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="NEXT REMINDER" Binding="{Binding NextReminder}" Width="1.4*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <TextBlock Style="{StaticResource Hint}"
+                           Text="Certificates assigned to a service, and the Auth certificate. Every reminder and failure also goes to the Application event log (source 'Exchange Certificate Manager'), so your monitoring can pick it up."/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+</UserControl>

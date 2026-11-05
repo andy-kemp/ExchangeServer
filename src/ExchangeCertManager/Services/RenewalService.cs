@@ -54,7 +54,7 @@ public static class AcmeDeployer
     }
 }
 
-/// <summary>Headless mode: ExchangeCertManager.exe --renew-acme [--force]. Run by the scheduled task.</summary>
+/// <summary>Headless mode: ExchangeCertManager.exe --renew-acme [--force]. Run nightly by the scheduled task: renewals, then expiry alerts.</summary>
 public static class RenewalRunner
 {
     public const string Argument = "--renew-acme";
@@ -66,13 +66,23 @@ public static class RenewalRunner
     /// </summary>
     public static string CheckFlag => Path.Combine(AppPaths.ProgramData, "check-next-run");
 
+    /// <summary>The nightly run: Let's Encrypt renewals that are due, then the expiry alerts.</summary>
     public static async Task<int> RunAsync(bool force)
     {
-        Log.Info($"Scheduled Let's Encrypt renewal started as {WindowsIdentity.GetCurrent().Name}");
+        Log.Info($"Nightly task started as {WindowsIdentity.GetCurrent().Name}");
+        var problems = new List<string>();
+        var code = await RenewAsync(force, problems);
+        var alerts = await AlertRunner.RunAsync(problems);
+        return code == 0 && alerts == 0 ? 0 : 1;
+    }
+
+    private static async Task<int> RenewAsync(bool force, List<string> problems)
+    {
         var renewals = AcmeService.LoadRenewals();
         if (renewals.Count == 0)
         {
-            Log.Info("No renewals are configured.");
+            Log.Info("No Let's Encrypt renewals are configured.");
+            try { File.Delete(CheckFlag); } catch { }
             return 0;
         }
 
@@ -81,7 +91,13 @@ public static class RenewalRunner
         {
             try { File.Delete(CheckFlag); } catch { }
             var checkFailures = await CheckAsync(renewals);
-            if (checkFailures > 0) { AcmeService.SaveRenewals(renewals); return 1; }
+            if (checkFailures > 0)
+            {
+                AcmeService.SaveRenewals(renewals);
+                problems.AddRange(renewals.Where(r => r.LastResult?.StartsWith("Check failed") == true)
+                    .Select(r => $"Let's Encrypt {r.DomainsText}: {r.LastResult}"));
+                return 1;
+            }
         }
 
         var failures = 0;
@@ -99,6 +115,7 @@ public static class RenewalRunner
                 Log.Warn($"{def.DomainsText}: uses manual DNS, so it can't renew unattended. Renew it from the Let's Encrypt page.");
                 def.LastRun = DateTime.Now;
                 def.LastResult = "Due: manual DNS, renew from the app";
+                problems.Add($"Let's Encrypt {def.DomainsText} is due but uses manual DNS, so it can't renew unattended. Renew it from the Let's Encrypt page.");
                 continue;
             }
 
@@ -116,6 +133,7 @@ public static class RenewalRunner
                 def.LastRun = DateTime.Now;
                 def.LastResult = $"Failed: {ex.Message}";
                 Log.Error($"{def.DomainsText}: renewal failed: {ex.Message}");
+                problems.Add($"Let's Encrypt renewal of {def.DomainsText} failed: {ex.Message}");
             }
         }
 
@@ -189,7 +207,7 @@ public static class RenewalTask
             <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
               <RegistrationInfo>
                 <Author>Andy Kemp Consulting Ltd</Author>
-                <Description>Renews Let's Encrypt certificates for Exchange when they're within {RenewalRunner.RenewWithinDays} days of expiry. Logs in {Log.LogDirectory}.</Description>
+                <Description>Renews Let's Encrypt certificates for Exchange when they're within {RenewalRunner.RenewWithinDays} days of expiry, and sends certificate expiry alerts if they're turned on. Logs in {Log.LogDirectory}.</Description>
               </RegistrationInfo>
               <Triggers>
                 <CalendarTrigger>

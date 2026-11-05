@@ -227,6 +227,7 @@ public static class DemoMode
                 main.DomainsPage.KeepOldAsSecondary = false;
                 main.DomainsPage.PreviewPlanCommand.Execute(null);
             }),
+            ("alerts", "13-alerts.png", () => main.Alerts.LoadDemo()),
             ("connect", "01-connect.png", null),
         };
 
