@@ -165,7 +165,9 @@ public static class AlertService
                     : upcoming >= 0 ? $"In {days - upcoming} day{(days - upcoming == 1 ? "" : "s")} ({upcoming} days before expiry)"
                     : "When it expires";
             }
-            var services = string.Join("; ", g.Installs.Where(i => i.HasServices).Select(i => i.Services).Distinct());
+            var services = string.Join(", ", g.Installs.Where(i => i.HasServices)
+                .SelectMany(i => i.Services.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x));
             return new CertificateAlertRow(NameOf(g), g.Thumbprint, g.ServersText, g.IsAuthCertificate ? "Auth" : services,
                 g.NotAfter, days, g.IsAuthCertificate, g.ExpiryText, next);
         }).ToList();
