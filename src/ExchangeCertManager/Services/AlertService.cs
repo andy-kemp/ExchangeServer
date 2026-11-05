@@ -438,7 +438,7 @@ public static class AlertService
 public static class AlertEventLog
 {
     public const string Source = "Exchange Certificate Manager";
-    public const int CertificateExpiring = 1001, CertificateExpired = 1002, RenewalFailed = 1003, CheckFailed = 1004, SendFailed = 1005, Sent = 1010;
+    public const int Checked = 1000, CertificateExpiring = 1001, CertificateExpired = 1002, RenewalFailed = 1003, CheckFailed = 1004, SendFailed = 1005, Sent = 1010;
 
     public static void Write(int id, EventLogEntryType type, string message)
     {
@@ -489,6 +489,9 @@ public static class AlertRunner
 
         var all = AlertService.Describe(groups, settings);
         var (due, newState) = AlertService.Evaluate(groups, settings, AlertService.LoadState(), DateTime.Now);
+        // A heartbeat: monitoring can alert when this stops appearing, which is the one failure the task can't report itself
+        AlertEventLog.Write(AlertEventLog.Checked, EventLogEntryType.Information,
+            $"Certificate expiry check ran as {WindowsIdentity.GetCurrent().Name}: {all.Count} certificate(s) watched, {due.Count} due a reminder, {problems.Count} problem(s).");
         foreach (var d in due)
         {
             var expired = d.DaysLeft < 0;
