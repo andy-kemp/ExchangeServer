@@ -22,6 +22,7 @@ public sealed partial class MainViewModel : ObservableObject
         Health = new HealthViewModel(this);
         Urls = new UrlsViewModel(this);
         DomainsPage = new DomainsViewModel(this);
+        Alerts = new AlertsViewModel(this);
         _currentPage = Connect;
         State.PropertyChanged += (_, e) =>
         {
@@ -50,6 +51,7 @@ public sealed partial class MainViewModel : ObservableObject
     public HealthViewModel Health { get; }
     public UrlsViewModel Urls { get; }
     public DomainsViewModel DomainsPage { get; }
+    public AlertsViewModel Alerts { get; }
 
     [ObservableProperty] private PageViewModel _currentPage;
     [ObservableProperty] private bool _showLog = true;
@@ -65,11 +67,12 @@ public sealed partial class MainViewModel : ObservableObject
     public bool IsHealthPage { get => CurrentPage == Health; set { if (value) Navigate("health"); } }
     public bool IsUrlsPage { get => CurrentPage == Urls; set { if (value) Navigate("urls"); } }
     public bool IsDomainsPage { get => CurrentPage == DomainsPage; set { if (value) Navigate("domains"); } }
+    public bool IsAlertsPage { get => CurrentPage == Alerts; set { if (value) Navigate("alerts"); } }
 
     partial void OnCurrentPageChanged(PageViewModel value)
     {
         foreach (var name in new[] { nameof(IsConnectPage), nameof(IsInventoryPage), nameof(IsRequestPage), nameof(IsCompletePage), nameof(IsImportPage),
-                                     nameof(IsDeployPage), nameof(IsAcmePage), nameof(IsHealthPage), nameof(IsUrlsPage), nameof(IsDomainsPage) })
+                                     nameof(IsDeployPage), nameof(IsAcmePage), nameof(IsHealthPage), nameof(IsUrlsPage), nameof(IsDomainsPage), nameof(IsAlertsPage) })
             OnPropertyChanged(name);
         value.OnShown();
     }
@@ -87,6 +90,7 @@ public sealed partial class MainViewModel : ObservableObject
             "health" => Health,
             "urls" => Urls,
             "domains" => DomainsPage,
+            "alerts" => Alerts,
             _ => Connect,
         };
     }
