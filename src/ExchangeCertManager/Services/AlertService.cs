@@ -258,7 +258,7 @@ public static class AlertService
         text.AppendLine("To renew, open Exchange Certificate Manager. Let's Encrypt certificates renew themselves 30 days before expiry; anything else needs a new request, or a PFX to import.");
         text.AppendLine($"Reminders are sent {string.Join(", ", settings.ReminderDays.OrderByDescending(x => x))} days before expiry, and daily once a certificate has expired. Change them on the Alerts page.");
 
-        var h = WebUtility.HtmlEncode;
+        Func<string?, string> h = s => WebUtility.HtmlEncode(s) ?? "";
         var html = new StringBuilder();
         html.Append("<div style=\"font-family:Segoe UI,Arial,sans-serif;font-size:14px;color:#1f1f1f;max-width:680px\">");
         html.Append("<div style=\"border-top:4px solid #8A4E2E;padding-top:12px;font-weight:600;font-size:16px;color:#8A4E2E\">Exchange Certificate Manager</div>");
