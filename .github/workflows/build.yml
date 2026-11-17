@@ -1,3 +1,8 @@
+# Code signing: Azure Artifact Signing (account akc-signing, profile akc-public, Andy Kemp Consulting Ltd).
+# The job signs in to Azure with OIDC through the app registration akc-codesign-github, whose federated
+# credential only trusts this repo's `release` environment, so no signing secret is stored anywhere.
+# Repo variables (not secrets): AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID.
+# Signatures are checked before anything is published: there are no unsigned releases.
 name: Build
 
 on:
@@ -8,16 +13,23 @@ on:
 
 permissions:
   contents: read
+  id-token: write   # OIDC sign-in to Azure for code signing
+
+env:
+  SIGN_ENDPOINT: https://weu.codesigning.azure.net
+  SIGN_ACCOUNT: akc-signing
+  SIGN_PROFILE: akc-public
+  SIGN_TSA: http://timestamp.acs.microsoft.com
+  SIGN_PUBLISHER: Andy Kemp Consulting Ltd
 
 jobs:
   build:
     runs-on: windows-latest
+    # Main builds are signed and published (see the publish job); pull requests build unsigned. Signing uses the
+    # `release` environment, the only place the signing identity (OIDC, no stored secret) is trusted.
+    environment: ${{ (github.event_name != 'pull_request' && github.ref == 'refs/heads/main') && 'release' || 'build' }}
     env:
-      # Code signing with Azure Artifact Signing (formerly Trusted Signing) turns on when its secrets are set:
-      # AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET (an app registration with the
-      # "Artifact Signing Certificate Profile Signer" role), ARTIFACT_SIGNING_ENDPOINT (e.g. https://weu.codesigning.azure.net/),
-      # ARTIFACT_SIGNING_ACCOUNT and ARTIFACT_SIGNING_PROFILE. Without them, builds are unsigned.
-      SIGNING: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT != '' }}
+      SIGNING: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -48,21 +60,65 @@ jobs:
           path: screenshots/*.png
           if-no-files-found: warn
 
+      - name: Sign in to Azure (OIDC, for code signing)
+        if: env.SIGNING == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Microsoft's SignTool with the Artifact Signing dlib, which signs in through the Azure CLI session above.
+      # Certificates last 72 hours, so the RFC 3161 timestamp is what keeps signatures valid. Writes two helpers:
+      #   & $env:AKC_SIGN -Description 'Name shown in UAC' -Path a.exe, b.dll   (sign)
+      #   & $env:AKC_CHECK -Path a.exe, b.dll                                     (Valid, timestamped, our publisher)
+      - name: Set up code signing
+        if: env.SIGNING == 'true'
+        shell: pwsh
+        run: |
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\10.*\x64\signtool.exe" |
+            Sort-Object { [version]$_.Directory.Parent.Name } | Select-Object -Last 1
+          if (-not $signtool) { throw 'signtool.exe not found on the runner' }
+          $dlibDir = Join-Path $env:RUNNER_TEMP 'artifact-signing'
+          nuget install Microsoft.ArtifactSigning.Client -x -OutputDirectory $dlibDir -NonInteractive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Could not install Microsoft.ArtifactSigning.Client' }
+          $dlib = Get-ChildItem $dlibDir -Recurse -Filter Azure.CodeSigning.Dlib.dll | Where-Object FullName -match '\\x64\\' | Select-Object -First 1
+          if (-not $dlib) { throw 'Azure.CodeSigning.Dlib.dll (x64) not found in the package' }
+          $meta = Join-Path $env:RUNNER_TEMP 'artifact-signing.json'
+          @{ Endpoint = $env:SIGN_ENDPOINT; CodeSigningAccountName = $env:SIGN_ACCOUNT; CertificateProfileName = $env:SIGN_PROFILE; CorrelationId = "${{ github.repository }}@${{ github.sha }}" } |
+            ConvertTo-Json | Set-Content $meta -Encoding utf8NoBOM
+          $sign = @'
+          param([Parameter(Mandatory)][string]$Description, [Parameter(Mandatory)][string[]]$Path)
+          foreach ($f in $Path) {
+            & $env:SIGNTOOL sign /v /fd SHA256 /tr $env:SIGN_TSA /td SHA256 /d $Description /du 'https://www.andykemp.com' /dlib $env:SIGN_DLIB /dmdf $env:SIGN_META $f
+            if ($LASTEXITCODE -ne 0) { throw "Could not sign $f" }
+          }
+          '@
+          $check = @'
+          param([Parameter(Mandatory)][string[]]$Path)
+          $bad = @()
+          foreach ($f in $Path) {
+            $s = Get-AuthenticodeSignature $f
+            Write-Host "$f : $($s.Status) | $($s.SignerCertificate.Subject) | timestamped: $([bool]$s.TimeStamperCertificate)"
+            if ($s.Status -ne 'Valid') { $bad += "$f is $($s.Status)" }
+            if (-not $s.TimeStamperCertificate) { $bad += "$f has no timestamp" }
+            if ($s.SignerCertificate.Subject -notmatch "O=$([regex]::Escape($env:SIGN_PUBLISHER))") { $bad += "$f is signed by '$($s.SignerCertificate.Subject)'" }
+          }
+          if ($bad) { $bad | ForEach-Object { Write-Host "::error::$_" }; throw 'Signature check failed: nothing is released' }
+          '@
+          Set-Content (Join-Path $env:RUNNER_TEMP 'akc-sign.ps1') $sign
+          Set-Content (Join-Path $env:RUNNER_TEMP 'akc-check.ps1') $check
+          "SIGNTOOL=$($signtool.FullName)" >> $env:GITHUB_ENV
+          "SIGN_DLIB=$($dlib.FullName)" >> $env:GITHUB_ENV
+          "SIGN_META=$meta" >> $env:GITHUB_ENV
+          "AKC_SIGN=$(Join-Path $env:RUNNER_TEMP 'akc-sign.ps1')" >> $env:GITHUB_ENV
+          "AKC_CHECK=$(Join-Path $env:RUNNER_TEMP 'akc-check.ps1')" >> $env:GITHUB_ENV
+          Write-Host "SignTool $($signtool.Directory.Parent.Name), dlib $($dlib.FullName)"
+
       - name: Sign the EXE
         if: env.SIGNING == 'true'
-        uses: azure/trusted-signing-action@v0
-        with:
-          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          endpoint: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
-          trusted-signing-account-name: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
-          certificate-profile-name: ${{ secrets.ARTIFACT_SIGNING_PROFILE }}
-          files-folder: publish
-          files-folder-filter: exe
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
+        shell: pwsh
+        run: '& $env:AKC_SIGN -Description "Exchange Certificate Manager" -Path publish/ExchangeCertManager.exe'
 
       - name: Build the MSI
         shell: pwsh
@@ -75,27 +131,16 @@ jobs:
 
       - name: Sign the MSI
         if: env.SIGNING == 'true'
-        uses: azure/trusted-signing-action@v0
-        with:
-          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
-          endpoint: ${{ secrets.ARTIFACT_SIGNING_ENDPOINT }}
-          trusted-signing-account-name: ${{ secrets.ARTIFACT_SIGNING_ACCOUNT }}
-          certificate-profile-name: ${{ secrets.ARTIFACT_SIGNING_PROFILE }}
-          files-folder: installer/out
-          files-folder-filter: msi
-          file-digest: SHA256
-          timestamp-rfc3161: http://timestamp.acs.microsoft.com
-          timestamp-digest: SHA256
+        shell: pwsh
+        run: '& $env:AKC_SIGN -Description "Exchange Certificate Manager" -Path installer/out/ExchangeCertManager.msi'
 
+      # Main builds must be signed, timestamped and from Andy Kemp Consulting Ltd, or nothing is published
       - name: Signature check
         shell: pwsh
         run: |
-          foreach ($f in 'publish/ExchangeCertManager.exe', 'installer/out/ExchangeCertManager.msi') {
-            $sig = Get-AuthenticodeSignature $f
-            "{0}: {1} {2}" -f (Split-Path $f -Leaf), $sig.Status, $sig.SignerCertificate.Subject
-          }
+          $files = 'publish/ExchangeCertManager.exe', 'installer/out/ExchangeCertManager.msi'
+          if ($env:SIGNING -eq 'true') { & $env:AKC_CHECK -Path $files }
+          else { foreach ($f in $files) { $sig = Get-AuthenticodeSignature $f; "{0}: {1} (pull request build, unsigned)" -f (Split-Path $f -Leaf), $sig.Status } }
 
       - uses: actions/upload-artifact@v4
         with:
